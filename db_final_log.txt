@@ -1,6 +1,0 @@
---- DB DIAGNOSTICS ---
-Time: 2026-03-13T03:23:25.809Z
-Tables found: users, monthly_budgets, expenses, loans, budget_periods
-budget_periods exists.
-Columns: id, user_id, name, amount, start_date, end_date, is_active, created_at
-Final Tables: users, monthly_budgets, expenses, loans, budget_periods
