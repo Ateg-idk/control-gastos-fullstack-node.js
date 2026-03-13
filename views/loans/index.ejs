@@ -14,6 +14,42 @@
     <div class="container" style="display: flex; min-height: 100vh;">
         <%- include('../partials/sidebar', { activePage: 'loans' }) %>
 
+    <div id="loadingOverlay"
+        style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; color: white;">
+        <div class="spinner" style="width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;"></div>
+        <p style="font-weight: 700; letter-spacing: 0.05em;">ACTUALIZANDO ESTADO...</p>
+    </div>
+
+    <style>
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .row-completed { opacity: 0.6; background: #f8fafc !important; }
+        
+        /* Toast Notification */
+        #toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #0f172a;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+            z-index: 2000;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+    </style>
+
+    <div id="toast">
+        <i class="fas fa-circle-check" style="color: var(--success);"></i>
+        <span id="toastMessage">Estado actualizado</span>
+    </div>
+
             <main class="main-content">
                 <header class="top-nav animate-slide-up">
                     <div class="welcome-text">
@@ -123,7 +159,7 @@
                                             </td>
                                             <td data-label="Gestión" style="text-align: center; padding-right: 1.5rem;">
                                                 <div style="display: flex; gap: 0.75rem; justify-content: center;">
-                                                    <form action="/loans/toggle/<%= loan.id %>" method="POST">
+                                                    <form action="/loans/toggle/<%= loan.id %>" method="POST" onsubmit="showLoading()">
                                                         <button type="submit"
                                                             class="btn-action <%= loan.status === 'pending' ? 'success' : 'undo' %>"
                                                             title="<%= loan.status === 'pending' ? 'Marcar Pagado' : 'Reabrir' %>">
@@ -131,9 +167,10 @@
                                                                 class="fas <%= loan.status === 'pending' ? 'fa-check' : 'fa-rotate-left' %>"></i>
                                                         </button>
                                                     </form>
-                                                    <form action="/loans/delete/<%= loan.id %>" method="POST"
-                                                        onsubmit="return confirm('¿Eliminar este préstamo?')">
-                                                        <button type="submit" class="btn-action delete">
+                                                    <form id="deleteLoanForm-<%= loan.id %>" action="/loans/delete/<%= loan.id %>" method="POST">
+                                                        <button type="button" class="btn-action delete"
+                                                            data-id="<%= loan.id %>" data-person="<%= loan.person_name %>"
+                                                            onclick="confirmDeleteLoan(this)">
                                                             <i class="fas fa-trash-can"></i>
                                                         </button>
                                                     </form>
@@ -162,7 +199,7 @@
             </main>
     </div>
     <div id="loanModal" class="modal">
-        <div class="modal-content" style="max-width: 500px; border-radius: 1.5rem; border: none; padding: 2.5rem;">
+        <div class="modal-content" style="max-width: 550px; border-radius: 1.5rem; border: none; padding: 2.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
                 <div>
                     <h2 style="font-weight: 800; color: var(--text-main); font-size: 1.5rem;">Nuevo Préstamo</h2>
@@ -178,7 +215,7 @@
                     <label
                         style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;">A
                         favor de (Persona)</label>
-                    <input type="text" name="person_name" required placeholder="Juan Pérez"
+                    <input type="text" name="person_name" required placeholder="Prestado a"
                         style="padding: 1rem; border-radius: 0.75rem; font-weight: 600;">
                 </div>
 
@@ -194,9 +231,9 @@
                         <label
                             style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;">Fuente</label>
                         <select name="from_budget"
-                            style="padding: 1rem; border-radius: 0.75rem; font-weight: 600; background: var(--bg-alt);">
-                            <option value="false">Cuenta Externa</option>
-                            <option value="true">Del Presupuesto</option>
+                            style="padding: 1rem 0.5rem; border-radius: 0.75rem; font-weight: 600; background: var(--bg-alt); text-overflow: ellipsis;">
+                            <option value="false">Externo</option>
+                            <option value="true">Presupuesto</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -210,8 +247,8 @@
                 <style>
                     .responsive-modal-grid {
                         display: grid;
-                        grid-template-columns: repeat(3, 1fr);
-                        gap: 1rem;
+                        grid-template-columns: 1fr 1.1fr 1fr;
+                        gap: 0.75rem;
                     }
 
                     @media (max-width: 600px) {
@@ -240,6 +277,31 @@
     </div>
 
     <script>
+        function confirmDeleteLoan(btn) {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-person');
+            customConfirm({
+                title: 'Eliminar Préstamo',
+                message: `¿Estás seguro de eliminar el préstamo de ${name}? Esta acción podría afectar tu presupuesto si es un préstamo activo.`,
+                onConfirm: () => {
+                    showLoading();
+                    document.getElementById(`deleteLoanForm-${id}`).submit();
+                }
+            });
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+
+        // Show toast if redirected with success
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('updated')) {
+            const toast = document.getElementById('toast');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
         function toggleModal(id) {
             const modal = document.getElementById(id);
             modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';

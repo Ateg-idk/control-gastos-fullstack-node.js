@@ -111,19 +111,20 @@
                                             </td>
                                             <td style="text-align: right;" data-label="Monto">
                                                 <span
-                                                    style="color: var(--danger); font-weight: 900; font-size: 1.05rem;">
-                                                    - S/ <%= parseFloat(exp.amount).toFixed(2) %>
+                                                    style="color: <%= exp.amount < 0 ? 'var(--success)' : 'var(--danger)' %>; font-weight: 900; font-size: 1.05rem;">
+                                                    <%= exp.amount < 0 ? '+ S/' : '- S/' %> <%= Math.abs(parseFloat(exp.amount)).toFixed(2) %>
                                                 </span>
                                             </td>
                                             <td style="text-align: center; padding-right: 1.5rem;"
                                                 data-label="Acciones">
                                                 <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                                                    <form action="/expenses/delete/<%= exp.id %>" method="POST"
-                                                        onsubmit="return confirm('¿Estás seguro de eliminar este registro?')">
-                                                        <button type="submit"
+                                                    <form id="deleteExpForm-<%= exp.id %>" action="/expenses/delete/<%= exp.id %>" method="POST">
+                                                        <button type="button"
                                                             style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
                                                             onmouseover="this.style.color='var(--danger)'"
-                                                            onmouseout="this.style.color='#94a3b8'">
+                                                            onmouseout="this.style.color='#94a3b8'"
+                                                            data-id="<%= exp.id %>" data-name="<%= exp.name %>"
+                                                            onclick="confirmDeleteExpense(this)">
                                                             <i class="fas fa-trash-alt" style="font-size: 1.1rem;"></i>
                                                         </button>
                                                     </form>
@@ -248,6 +249,18 @@
     </button>
 
     <script>
+        function confirmDeleteExpense(btn) {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            customConfirm({
+                title: 'Eliminar Movimiento',
+                message: `¿Estás seguro de eliminar "${name}"? El balance se ajustará automáticamente.`,
+                onConfirm: () => {
+                    document.getElementById(`deleteExpForm-${id}`).submit();
+                }
+            });
+        }
+
         const modal = document.getElementById('expenseModal');
 
         function openModal() {

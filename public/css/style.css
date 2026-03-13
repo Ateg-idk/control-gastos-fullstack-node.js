@@ -481,6 +481,37 @@ textarea:focus {
     opacity: 1;
 }
 
+/* Stats & Analysis Grids */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.analysis-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+/* Desktop Refinements (Balancing the layout) */
+@media (min-width: 1025px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr); /* Balanced 3-column layout */
+    }
+
+    .analysis-row {
+        grid-template-columns: 1.6fr 1fr; /* Larger chart, smaller loans block */
+    }
+
+    .main-content {
+        padding: 3rem 4rem;
+        max-width: 1600px; /* Prevent over-stretching on ultra-wide */
+    }
+}
+
 /* Responsive Overrides */
 @media (max-width: 1024px) {
     .mobile-toggle {
@@ -498,8 +529,7 @@ textarea:focus {
     }
 
     .analysis-row, .stats-grid {
-        grid-template-columns: 1fr !important;
-        gap: 1.25rem !important;
+        gap: 1.25rem;
     }
 
     .loan-stat-item {

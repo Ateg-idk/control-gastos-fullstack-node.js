@@ -1,0 +1,52 @@
+<!-- Custom Confirmation Modal -->
+<div id="confirmModal" class="modal" style="display: none; z-index: 3000;">
+    <div class="modal-content" style="max-width: 400px; text-align: center; padding: 2.5rem; border-radius: 1.5rem;">
+        <div
+            style="width: 60px; height: 60px; background: #fff1f2; color: var(--danger); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 1.5rem;">
+            <i class="fas fa-trash-can"></i>
+        </div>
+        <h3 id="confirmTitle" style="font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">¿Estás seguro?
+        </h3>
+        <p id="confirmMessage" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 2rem;">Esta acción no
+            se puede deshacer.</p>
+
+        <div style="display: flex; gap: 1rem;">
+            <button onclick="closeConfirmModal()" class="btn"
+                style="flex: 1; background: var(--bg-alt); color: var(--text-main); justify-content: center;">Cancelar</button>
+            <button id="confirmBtn" class="btn"
+                style="flex: 1; background: var(--danger); color: white; justify-content: center;">Eliminar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let confirmCallback = null;
+
+    function customConfirm({ title, message, onConfirm }) {
+        document.getElementById('confirmTitle').innerText = title || '¿Estás seguro?';
+        document.getElementById('confirmMessage').innerText = message || 'Esta acción no se puede deshacer.';
+        confirmCallback = onConfirm;
+        document.getElementById('confirmModal').style.display = 'flex';
+    }
+
+    function closeConfirmModal() {
+        document.getElementById('confirmModal').style.display = 'none';
+        confirmCallback = null;
+    }
+
+    document.getElementById('confirmBtn').addEventListener('click', () => {
+        if (confirmCallback) confirmCallback();
+        closeConfirmModal();
+    });
+
+    function customAlert({ title, message, type = 'error' }) {
+        const toast = document.getElementById('toast');
+        if (toast) {
+            const msg = document.getElementById('toastMessage');
+            msg.innerText = message;
+            toast.style.background = type === 'error' ? 'var(--danger)' : '#0f172a';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+    }
+</script>

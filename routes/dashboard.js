@@ -31,14 +31,32 @@ router.get('/', async (req, res) => {
         }
         const loansRes = await db.query('SELECT * FROM loans WHERE user_id = $1 ORDER BY status DESC, date DESC', [userId]);
         const loans = loansRes.rows;
+        const regularExpenses = expenses.filter(exp => exp.category !== 'Préstamo');
+        const totalRegularSpent = regularExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
 
-        const totalSpent = expenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
+        const totalLentThisPeriod = loans
+            .filter(l => l.from_budget && new Date(l.date) >= new Date(activePeriod.start_date) && new Date(l.date) <= new Date(activePeriod.end_date))
+            .reduce((sum, l) => sum + parseFloat(l.amount), 0);
+
+        const totalRecoveredThisPeriod = loans
+            .filter(l => l.from_budget && l.status === 'paid' && l.payment_date && new Date(l.payment_date) >= new Date(activePeriod.start_date) && new Date(l.payment_date) <= new Date(activePeriod.end_date))
+            .reduce((sum, l) => sum + parseFloat(l.amount), 0);
+
+        const totalSpent = totalRegularSpent + totalLentThisPeriod - totalRecoveredThisPeriod;
         const balance = budget - totalSpent;
-        const categoryData = expenses.reduce((acc, exp) => {
+
+        const categoryData = regularExpenses.reduce((acc, exp) => {
             const cat = exp.category || 'Otros';
             acc[cat] = (acc[cat] || 0) + parseFloat(exp.amount);
             return acc;
         }, {});
+
+        if (totalLentThisPeriod > 0) {
+            categoryData['Préstamo'] = (categoryData['Préstamo'] || 0) + totalLentThisPeriod;
+        }
+        if (totalRecoveredThisPeriod > 0) {
+            categoryData['Préstamo'] = (categoryData['Préstamo'] || 0) - totalRecoveredThisPeriod;
+        }
 
         const totalPendingLoans = loans
             .filter(l => l.status === 'pending')
