@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingreso - GastosMoni</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at top left, #4338ca 0%, #1e1b4b 100%);
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Ambient light effects */
+        .ambient-light {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: var(--primary);
+            filter: blur(150px);
+            opacity: 0.3;
+            border-radius: 50%;
+            z-index: 0;
+        }
+
+        .auth-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 3.5rem;
+            border-radius: 2rem;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 10;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-primary {
+            box-shadow: 0 15px 30px -10px rgba(67, 56, 202, 0.4);
+            border-radius: 1rem;
+        }
+
+        input {
+            border-radius: 1rem !important;
+            padding: 1rem 1rem 1rem 3rem !important;
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 2rem 1.5rem !important;
+                border-radius: 1.5rem !important;
+                width: 90% !important;
+            }
+            h1 {
+                font-size: 1.75rem !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient-light" style="top: -100px; left: -100px;"></div>
+    <div class="ambient-light" style="bottom: -100px; right: -100px; background: #818cf8;"></div>
+
+    <div class="auth-card animate-slide-up">
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <div
+                style="width: 70px; height: 70px; background: var(--primary-light); color: var(--primary); border-radius: 1.5rem; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem; transform: rotate(-10deg);">
+                <i class="fas fa-gem"></i>
+            </div>
+            <h1
+                style="font-weight: 900; font-size: 2.25rem; color: var(--text-main); letter-spacing: -0.03em; margin-bottom: 0.5rem;">
+                GastosMoni</h1>
+            <p style="color: var(--text-muted); font-weight: 500;">Tu ecosistema financiero inteligente</p>
+        </div>
+
+        <%- include('partials/error_handler') %>
+
+            <form action="/login" method="POST">
+                <div class="form-group">
+                    <label
+                        style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: var(--text-muted);">Identificador
+                        de Usuario</label>
+                    <div style="position: relative; margin-top: 0.75rem; display: flex; align-items: center;">
+                        <i class="fas fa-user"
+                            style="position: absolute; left: 1.25rem; color: var(--primary); font-size: 1.1rem; z-index: 5;"></i>
+                        <input type="text" name="username" required placeholder="Nombre de usuario"
+                            style="background: var(--bg-alt); border: 2px solid transparent; padding-left: 3.25rem !important;"
+                            onfocus="this.style.borderColor='var(--primary)'; this.style.background='white'">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label
+                        style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em; color: var(--text-muted);">Clave
+                        de Acceso</label>
+                    <div class="password-field" style="margin-top: 0.75rem;">
+                        <i class="fas fa-lock"
+                            style="position: absolute; left: 1.25rem; color: var(--primary); font-size: 1.1rem; z-index: 5;"></i>
+                        <input type="password" id="password" name="password" required placeholder="••••••••"
+                            style="background: var(--bg-alt); border: 2px solid transparent; width: 100%; padding-left: 3.25rem !important;"
+                            onfocus="this.style.borderColor='var(--primary)'; this.style.background='white'">
+                        <i class="fas fa-eye password-toggle" id="togglePassword"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary"
+                    style="width: 100%; padding: 1.25rem; font-size: 1.125rem; font-weight: 800; margin-top: 1.5rem; justify-content: center;">
+                    Iniciar Sesión <i class="fas fa-arrow-right" style="margin-left: 0.75rem;"></i>
+                </button>
+            </form>
+
+            <div
+                style="text-align: center; margin-top: 3rem; font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">
+                ¿Eres nuevo en la plataforma? <a href="/register"
+                    style="color: var(--primary); font-weight: 800; text-decoration: none;">Crea una cuenta</a>
+            </div>
+    </div>
+
+    <script>
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#password');
+
+        togglePassword.addEventListener('click', function (e) {
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            this.classList.toggle('fa-eye-slash');
+        });
+    </script>
+</body>
+
+</html>

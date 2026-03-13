@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movimientos - GastosMoni</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container" style="display: flex; min-height: 100vh;">
+        <%- include('../partials/sidebar', { activePage: 'expenses' }) %>
+
+            <main class="main-content">
+                <header class="top-nav animate-slide-up">
+                    <div class="welcome-text">
+                        <h1>Historial de Movimientos</h1>
+                        <p>Visualiza y gestiona todos tus registros de gastos.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button onclick="openModal()" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Nuevo Gasto
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Professional Filters -->
+                <div class="premium-card animate-slide-up"
+                    style="margin-bottom: 2rem; padding: 1.5rem; animation-delay: 0.1s;">
+                    <form action="/expenses" method="GET"
+                        style="display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Buscar
+                                Movimiento</label>
+                            <div style="position: relative;">
+                                <i class="fas fa-search"
+                                    style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                <input type="text" name="search" placeholder="Buscar por concepto o notas..."
+                                    value="<%= filters.search || '' %>"
+                                    style="padding-left: 2.75rem; border-radius: 0.75rem;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Período</label>
+                            <input type="month" name="month" value="<%= filters.month || '' %>"
+                                style="border-radius: 0.75rem;">
+                        </div>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button type="submit" class="btn btn-primary"
+                                style="padding: 0.75rem 1.5rem; border-radius: 0.75rem;">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                            <% if (filters.search || filters.month) { %>
+                                <a href="/expenses" class="btn"
+                                    style="background: var(--bg-alt); color: var(--text-main); font-weight: 700; border-radius: 0.75rem; padding: 0.75rem;">
+                                    <i class="fas fa-undo"></i>
+                                </a>
+                                <% } %>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Main Data Table -->
+                <div class="premium-card animate-slide-up" style="padding: 0; overflow: hidden; animation-delay: 0.2s;">
+                    <div class="table-container">
+                        <table class="data-table mobile-cards">
+                            <thead>
+                                <tr>
+                                    <th style="padding-left: 1.5rem;">Fecha</th>
+                                    <th>Concepto & Detalles</th>
+                                    <th>Categoría</th>
+                                    <th style="text-align: right;">Monto</th>
+                                    <th style="text-align: center; padding-right: 1.5rem;">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (expenses && expenses.length> 0) { %>
+                                    <% expenses.forEach(exp=> { %>
+                                        <tr>
+                                            <td style="padding-left: 1.5rem;" data-label="Fecha">
+                                                <div
+                                                    style="font-weight: 800; color: var(--text-main); font-size: 0.95rem;">
+                                                    <%= new Date(exp.date).toLocaleDateString('es-ES', { day: '2-digit'
+                                                        }) %>
+                                                </div>
+                                                <div
+                                                    style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">
+                                                    <%= new Date(exp.date).toLocaleDateString('es-ES', { month: 'short'
+                                                        }) %>
+                                                </div>
+                                            </td>
+                                            <td data-label="Concepto">
+                                                <div style="font-weight: 700; color: var(--text-main);">
+                                                    <%= exp.name %>
+                                                </div>
+                                                <div
+                                                    style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+                                                    <%= exp.description || 'Sin descripción adicional' %>
+                                                </div>
+                                            </td>
+                                            <td data-label="Categoría">
+                                                <span
+                                                    style="font-size: 0.65rem; font-weight: 800; background: var(--bg-alt); color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--border);">
+                                                    <%= exp.category || 'Otros' %>
+                                                </span>
+                                            </td>
+                                            <td style="text-align: right;" data-label="Monto">
+                                                <span
+                                                    style="color: var(--danger); font-weight: 900; font-size: 1.05rem;">
+                                                    - S/ <%= parseFloat(exp.amount).toFixed(2) %>
+                                                </span>
+                                            </td>
+                                            <td style="text-align: center; padding-right: 1.5rem;"
+                                                data-label="Acciones">
+                                                <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                                                    <form action="/expenses/delete/<%= exp.id %>" method="POST"
+                                                        onsubmit="return confirm('¿Estás seguro de eliminar este registro?')">
+                                                        <button type="submit"
+                                                            style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
+                                                            onmouseover="this.style.color='var(--danger)'"
+                                                            onmouseout="this.style.color='#94a3b8'">
+                                                            <i class="fas fa-trash-alt" style="font-size: 1.1rem;"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="5" style="text-align: center; padding: 6rem 2rem;">
+                                                        <div
+                                                            style="font-size: 3.5rem; margin-bottom: 1.5rem; color: #e2e8f0;">
+                                                            <i class="fas fa-folder-open"></i>
+                                                        </div>
+                                                        <h3
+                                                            style="color: var(--text-main); font-weight: 800; margin-bottom: 0.5rem;">
+                                                            No hay registros</h3>
+                                                        <p style="color: var(--text-muted);">No encontramos movimientos
+                                                            que coincidan con tu búsqueda.</p>
+                                                    </td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <!-- Expense Registration Modal -->
+    <div class="modal" id="expenseModal">
+        <div class="modal-content animate-slide-up" style="max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="font-weight: 800; display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fas fa-plus-circle" style="color: var(--primary);"></i>
+                    Nuevo Gasto
+                </h2>
+                <button type="button" class="btn" style="background: none; padding: 0.5rem; color: var(--text-muted);"
+                    onclick="closeModal()">
+                    <i class="fas fa-times" style="font-size: 1.25rem;"></i>
+                </button>
+            </div>
+
+            <form action="/expenses/add" method="POST">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label
+                            style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.1em;">Concepto</label>
+                        <input type="text" name="name" required placeholder="Ej: Supermercado..."
+                            style="padding: 1rem; border-radius: 0.75rem;">
+                    </div>
+
+                    <div class="form-group">
+                        <label
+                            style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.1em;">Monto
+                            (S/.)</label>
+                        <input type="number" step="0.01" name="amount" required placeholder="0.00"
+                            style="padding: 1rem; border-radius: 0.75rem; font-weight: 800;">
+                    </div>
+
+                    <div class="form-group">
+                        <label
+                            style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.1em;">Fecha</label>
+                        <input type="date" name="date" required value="<%= new Date().toISOString().split('T')[0] %>"
+                            style="padding: 1rem; border-radius: 0.75rem;">
+                    </div>
+
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label
+                            style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.1em;">Detalles
+                            opcionales</label>
+                        <textarea name="description" placeholder="Notas adicionales..." rows="2"
+                            style="padding: 1rem; border-radius: 0.75rem; font-family: inherit; font-size: 0.9rem;"></textarea>
+                    </div>
+
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label
+                            style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.1em; margin-bottom: 0.75rem; display: block;">Categoría</label>
+                        <div class="category-grid" style="grid-template-columns: repeat(3, 1fr);">
+                            <div class="category-option selected" onclick="modalSelectCategory('Otros', this)">
+                                <i class="fas fa-grid-horizontal"></i>
+                                <span style="font-size: 0.6rem;">Otros</span>
+                            </div>
+                            <div class="category-option" onclick="modalSelectCategory('Comida', this)">
+                                <i class="fas fa-utensils"></i>
+                                <span style="font-size: 0.6rem;">Comida</span>
+                            </div>
+                            <div class="category-option" onclick="modalSelectCategory('Transporte', this)">
+                                <i class="fas fa-car-side"></i>
+                                <span style="font-size: 0.6rem;">Transp.</span>
+                            </div>
+                            <div class="category-option" onclick="modalSelectCategory('Servicios', this)">
+                                <i class="fas fa-plug"></i>
+                                <span style="font-size: 0.6rem;">Servic.</span>
+                            </div>
+                            <div class="category-option" onclick="modalSelectCategory('Ocio', this)">
+                                <i class="fas fa-clapperboard"></i>
+                                <span style="font-size: 0.6rem;">Ocio</span>
+                            </div>
+                            <div class="category-option" onclick="modalSelectCategory('Salud', this)">
+                                <i class="fas fa-heart-pulse"></i>
+                                <span style="font-size: 0.6rem;">Salud</span>
+                            </div>
+                        </div>
+                        <input type="hidden" name="category" id="modalCategoryInput" value="Otros">
+                    </div>
+                </div>
+
+                <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-primary"
+                        style="flex: 1; justify-content: center; padding: 1.125rem; border-radius: 0.75rem; font-weight: 800;">
+                        Registrar Movimiento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Floating Action Button for Mobile / Quick Access -->
+    <button type="button" class="fab" title="Registrar Movimiento" onclick="openModal()">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <script>
+        const modal = document.getElementById('expenseModal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function modalSelectCategory(cat, el) {
+            document.querySelectorAll('.modal .category-option').forEach(opt => opt.classList.remove('selected'));
+            el.classList.add('selected');
+            document.getElementById('modalCategoryInput').value = cat;
+        }
+
+        // Close on clic outside
+        window.onclick = function (event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+
+</html>

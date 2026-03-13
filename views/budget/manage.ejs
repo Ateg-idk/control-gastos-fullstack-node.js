@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionar Periodos - GastosMoni</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container" style="display: flex; min-height: 100vh;">
+        <%- include('../partials/sidebar', { activePage: 'budget' }) %>
+
+            <main class="main-content">
+                <header class="top-nav animate-slide-up">
+                    <div class="welcome-text">
+                        <h1>Gestión de Presupuestos</h1>
+                        <p style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.4; max-width: 100%;">
+                            <%= 'Controla tus objetivos financieros mediante periodos personalizados.' %>
+                        </p>
+                    </div>
+                </header>
+
+                <div class="stats-grid animate-slide-up"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-top: 2rem;">
+                    <!-- New Period Form -->
+                    <div class="premium-card" style="border-top: 5px solid var(--primary);">
+                        <h3
+                            style="font-weight: 800; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-plus-circle" style="color: var(--primary);"></i>
+                            Nuevo Periodo
+                        </h3>
+
+                        <form action="/budget/add" method="POST">
+                            <div class="form-group">
+                                <label
+                                    style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; display: block; margin-bottom: 0.75rem;">Nombre
+                                    del Periodo</label>
+                                <input type="text" name="name" required placeholder="Ej: Quincena Marzo, Vacaciones..."
+                                    style="background: var(--bg-alt); border: 2px solid transparent; border-radius: 1rem; padding: 1rem; width: 100%;"
+                                    onfocus="this.style.borderColor='var(--primary)'; this.style.background='white'">
+                            </div>
+
+                            <div class="form-group" style="margin-top: 1.5rem;">
+                                <label
+                                    style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; display: block; margin-bottom: 0.75rem;">Monto
+                                    Presupuestado (S/.)</label>
+                                <input type="number" step="0.01" name="amount" required placeholder="0.00"
+                                    style="background: var(--bg-alt); border: 2px solid transparent; border-radius: 1rem; padding: 1rem; width: 100%; font-weight: 700; font-size: 1.25rem;"
+                                    onfocus="this.style.borderColor='var(--primary)'; this.style.background='white'">
+                            </div>
+
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+                                <div class="form-group">
+                                    <label
+                                        style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; display: block; margin-bottom: 0.75rem;">Fecha
+                                        Inicio</label>
+                                    <input type="date" name="start_date" required
+                                        style="background: var(--bg-alt); border: 2px solid transparent; border-radius: 1rem; padding: 1rem; width: 100%;"
+                                        onfocus="this.style.borderColor='var(--primary)'; this.style.background='white'">
+                                </div>
+                                <div class="form-group">
+                                    <label
+                                        style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; display: block; margin-bottom: 0.75rem;">Fecha
+                                        Fin</label>
+                                    <input type="date" name="end_date" required
+                                        style="background: var(--bg-alt); border: 2px solid transparent; border-radius: 1rem; padding: 1rem; width: 100%;"
+                                        onfocus="this.style.borderColor='var(--primary)'; this.style.background='white'">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary"
+                                style="width: 100%; padding: 1.25rem; font-weight: 800; margin-top: 2rem; justify-content: center; border-radius: 1rem;">
+                                <i class="fas fa-play" style="margin-right: 0.75rem;"></i> Iniciar Nuevo Periodo
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Current Active Period -->
+                    <div class="premium-card" style="border-top: 5px solid var(--success); background: var(--bg-alt);">
+                        <h3
+                            style="font-weight: 800; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="fas fa-bolt" style="color: var(--success);"></i>
+                            Periodo Activo
+                        </h3>
+
+                        <% if (activePeriod) { %>
+                            <div style="text-align: center; padding: 1rem 0;">
+                                <h2
+                                    style="font-weight: 900; font-size: 2.5rem; color: var(--text-main); margin-bottom: 0.5rem;">
+                                    <%= activePeriod.name %>
+                                </h2>
+                                <div
+                                    style="display: flex; align-items: center; justify-content: center; gap: 1rem; color: var(--text-muted); font-size: 0.875rem; font-weight: 600; margin-bottom: 2rem;">
+                                    <span><i class="fas fa-calendar-day"></i>
+                                        <%= new Date(activePeriod.start_date).toLocaleDateString() %>
+                                    </span>
+                                    <i class="fas fa-arrow-right" style="font-size: 0.7rem;"></i>
+                                    <span><i class="fas fa-calendar-check"></i>
+                                        <%= new Date(activePeriod.end_date).toLocaleDateString() %>
+                                    </span>
+                                </div>
+                                <div
+                                    style="background: white; padding: 2rem; border-radius: 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 2.5rem;">
+                                    <span
+                                        style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;">Presupuesto
+                                        Total</span>
+                                    <h3
+                                        style="font-size: 2rem; font-weight: 900; color: var(--primary); margin-top: 0.5rem;">
+                                        S/ <%= parseFloat(activePeriod.amount).toFixed(2) %>
+                                    </h3>
+                                </div>
+
+                                <form action="/budget/close/<%= activePeriod.id %>" method="POST"
+                                    onsubmit="return confirm('¿Estás seguro de cerrar este periodo? Se guardará en el historial.')">
+                                    <button type="submit" class="btn"
+                                        style="width: 100%; background: #fee2e2; color: var(--danger); font-weight: 800; padding: 1.25rem; border-radius: 1rem; justify-content: center;">
+                                        <i class="fas fa-lock" style="margin-right: 0.75rem;"></i> Finalizar y Cerrar
+                                        Periodo
+                                    </button>
+                                </form>
+                            </div>
+                            <% } else { %>
+                                <div style="text-align: center; padding: 4rem 2rem;">
+                                    <i class="fas fa-ghost"
+                                        style="font-size: 3.5rem; color: #cbd5e1; margin-bottom: 1.5rem;"></i>
+                                    <h4 style="color: var(--text-main); font-weight: 800;">No hay periodo activo</h4>
+                                    <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">Crea
+                                        uno nuevo para comenzar a trackear tus gastos.</p>
+                                </div>
+                                <% } %>
+                    </div>
+                </div>
+
+                <!-- History Section -->
+                <div class="premium-card animate-slide-up" style="margin-top: 2rem;">
+                    <h3
+                        style="font-weight: 800; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas fa-clock-rotate-left" style="color: var(--primary);"></i>
+                        Historial de Periodos
+                    </h3>
+
+                    <div class="table-container">
+                        <table class="data-table mobile-cards">
+                            <thead>
+                                <tr>
+                                    <th style="padding-left: 1.5rem;">Nombre</th>
+                                    <th>Rango de Fechas</th>
+                                    <th style="text-align: right;">Presupuesto</th>
+                                    <th style="text-align: center; padding-right: 1.5rem;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (history && history.length> 0) { %>
+                                    <% history.forEach(p=> { %>
+                                        <tr>
+                                            <td style="padding-left: 1.5rem; font-weight: 800; color: var(--text-main);"
+                                                data-label="Nombre">
+                                                <%= p.name %>
+                                            </td>
+                                            <td data-label="Rango">
+                                                <span
+                                                    style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">
+                                                    <%= new Date(p.start_date).toLocaleDateString() %> - <%= new
+                                                            Date(p.end_date).toLocaleDateString() %>
+                                                </span>
+                                            </td>
+                                            <td style="text-align: right; font-weight: 800;" data-label="Presupuesto">S/
+                                                <%= parseFloat(p.amount).toFixed(2) %>
+                                            </td>
+                                            <td style="text-align: center; padding-right: 1.5rem;" data-label="Estado">
+                                                <span class="status-badge paid">Cerrado</span>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="4" style="text-align: center; padding: 3rem;">No hay
+                                                        periodos anteriores registrados.</td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+    </div>
+</body>
+
+</html>

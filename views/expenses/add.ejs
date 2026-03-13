@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nuevo Movimiento - GastosMoni</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container" style="display: flex; min-height: 100vh;">
+        <%- include('../partials/sidebar', { activePage: 'add-expense' }) %>
+
+            <main class="main-content">
+                <header class="top-nav">
+                    <div class="welcome-text">
+                        <h1>Registrar Movimiento</h1>
+                        <p>Completa la información para tu nuevo gasto mensual.</p>
+                    </div>
+                </header>
+
+                <div class="animate-slide-up" style="max-width: 800px; margin: 0 auto;">
+                    <form action="/expenses/add" method="POST" class="premium-card" style="padding: 2.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label
+                                    style="text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em;">Concepto
+                                    del Gasto</label>
+                                <input type="text" name="name" placeholder="Ej: Supermercado, Alquiler, Pizza..."
+                                    required autocomplete="off"
+                                    style="font-size: 1.125rem; font-weight: 600; padding: 1rem;">
+                            </div>
+
+                            <div class="form-group">
+                                <label
+                                    style="text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em;">Monto
+                                    (Soles)</label>
+                                <div style="position: relative;">
+                                    <span
+                                        style="position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); font-weight: 800; color: var(--primary); font-size: 1.25rem;">S/</span>
+                                    <input type="number" step="0.01" name="amount" required
+                                        style="padding: 1rem 1rem 1rem 3.5rem; font-size: 1.25rem; font-weight: 800;"
+                                        placeholder="0.00">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label
+                                    style="text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em;">Fecha
+                                    del Gasto</label>
+                                <input type="date" name="date" value="<%= new Date().toISOString().split('T')[0] %>"
+                                    style="padding: 1rem; font-weight: 600;">
+                            </div>
+
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label
+                                    style="text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em; margin-bottom: 1rem;">Categoría
+                                    del Movimiento</label>
+                                <div class="category-grid">
+                                    <div class="category-option selected" onclick="selectCategory('Otros', this)">
+                                        <i class="fas fa-grid-horizontal"></i>
+                                        <span>Otros</span>
+                                    </div>
+                                    <div class="category-option" onclick="selectCategory('Comida', this)">
+                                        <i class="fas fa-utensils"></i>
+                                        <span>Comida</span>
+                                    </div>
+                                    <div class="category-option" onclick="selectCategory('Transporte', this)">
+                                        <i class="fas fa-car-side"></i>
+                                        <span>Transporte</span>
+                                    </div>
+                                    <div class="category-option" onclick="selectCategory('Servicios', this)">
+                                        <i class="fas fa-plug"></i>
+                                        <span>Servicios</span>
+                                    </div>
+                                    <div class="category-option" onclick="selectCategory('Entretenimiento', this)">
+                                        <i class="fas fa-clapperboard"></i>
+                                        <span>Ocio</span>
+                                    </div>
+                                    <div class="category-option" onclick="selectCategory('Salud', this)">
+                                        <i class="fas fa-heart-pulse"></i>
+                                        <span>Salud</span>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="category" id="categoryInput" value="Otros">
+                            </div>
+
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label
+                                    style="text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em;">Notas
+                                    adicionales</label>
+                                <textarea name="description" placeholder="Escribe aquí cualquier detalle extra..."
+                                    rows="3" style="padding: 1rem; font-size: 1rem;"></textarea>
+                            </div>
+                        </div>
+
+                        <div
+                            style="margin-top: 2rem; display: flex; gap: 1rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+                            <button type="submit" class="btn btn-primary"
+                                style="flex: 1; justify-content: center; padding: 1.25rem; font-size: 1rem; border-radius: 1rem;">
+                                <i class="fas fa-rocket"></i> Registrar Movimiento
+                            </button>
+                            <a href="/dashboard" class="btn"
+                                style="background: var(--bg-alt); color: var(--text-main); font-weight: 700; padding: 1.25rem 2rem; border-radius: 1rem;">
+                                Cancelar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </main>
+    </div>
+
+    <script>
+        function selectCategory(cat, el) {
+            document.querySelectorAll('.category-option').forEach(opt => opt.classList.remove('selected'));
+            el.classList.add('selected');
+            document.getElementById('categoryInput').value = cat;
+        }
+    </script>
+</body>
+
+</html>
