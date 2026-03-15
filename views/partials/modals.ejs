@@ -27,10 +27,12 @@
         document.getElementById('confirmMessage').innerText = message || 'Esta acción no se puede deshacer.';
         confirmCallback = onConfirm;
         document.getElementById('confirmModal').style.display = 'flex';
+        document.body.classList.add('modal-open');
     }
 
     function closeConfirmModal() {
         document.getElementById('confirmModal').style.display = 'none';
+        document.body.classList.remove('modal-open');
         confirmCallback = null;
     }
 

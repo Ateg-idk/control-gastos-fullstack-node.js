@@ -113,14 +113,19 @@
                                     </h3>
                                 </div>
 
-                                <form action="/budget/close/<%= activePeriod.id %>" method="POST"
-                                    onsubmit="return confirm('¿Estás seguro de cerrar este periodo? Se guardará en el historial.')">
-                                    <button type="submit" class="btn"
-                                        style="width: 100%; background: #fee2e2; color: var(--danger); font-weight: 800; padding: 1.25rem; border-radius: 1rem; justify-content: center;">
-                                        <i class="fas fa-lock" style="margin-right: 0.75rem;"></i> Finalizar y Cerrar
-                                        Periodo
+                                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                                    <button type="button" class="btn" style="flex: 1; min-width: 200px; background: white; color: var(--primary); font-weight: 800; padding: 1.25rem; border-radius: 1rem; justify-content: center; border: 1px solid var(--primary);"
+                                        onclick="openEditBudgetModal('<%= activePeriod.id %>', '<%= activePeriod.name %>', '<%= activePeriod.amount %>', '<%= activePeriod.start_date %>', '<%= activePeriod.end_date %>')">
+                                        <i class="fas fa-edit" style="margin-right: 0.75rem;"></i> Editar
                                     </button>
-                                </form>
+                                    <form action="/budget/close/<%= activePeriod.id %>" method="POST" style="flex: 1; min-width: 200px;"
+                                        onsubmit="return confirm('¿Estás seguro de cerrar este periodo? Se guardará en el historial.')">
+                                        <button type="submit" class="btn"
+                                            style="width: 100%; background: #fee2e2; color: var(--danger); font-weight: 800; padding: 1.25rem; border-radius: 1rem; justify-content: center;">
+                                            <i class="fas fa-lock" style="margin-right: 0.75rem;"></i> Finalizar Periodo
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
                             <% } else { %>
                                 <div style="text-align: center; padding: 4rem 2rem;">
@@ -149,7 +154,8 @@
                                     <th style="padding-left: 1.5rem;">Nombre</th>
                                     <th>Rango de Fechas</th>
                                     <th style="text-align: right;">Presupuesto</th>
-                                    <th style="text-align: center; padding-right: 1.5rem;">Estado</th>
+                                    <th style="text-align: center;">Estado</th>
+                                    <th style="text-align: center; padding-right: 1.5rem;">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -170,14 +176,21 @@
                                             <td style="text-align: right; font-weight: 800;" data-label="Presupuesto">S/
                                                 <%= parseFloat(p.amount).toFixed(2) %>
                                             </td>
-                                            <td style="text-align: center; padding-right: 1.5rem;" data-label="Estado">
+                                            <td style="text-align: center;" data-label="Estado">
                                                 <span class="status-badge paid">Cerrado</span>
+                                            </td>
+                                            <td style="text-align: center; padding-right: 1.5rem;" data-label="Acciones">
+                                                <button type="button" style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
+                                                    onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='#94a3b8'"
+                                                    onclick="openEditBudgetModal('<%= p.id %>', '<%= p.name %>', '<%= p.amount %>', '<%= p.start_date %>', '<%= p.end_date %>')">
+                                                    <i class="fas fa-edit" style="font-size: 1.1rem;"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                         <% }) %>
                                             <% } else { %>
                                                 <tr>
-                                                    <td colspan="4" style="text-align: center; padding: 3rem;">No hay
+                                                    <td colspan="5" style="text-align: center; padding: 3rem;">No hay
                                                         periodos anteriores registrados.</td>
                                                 </tr>
                                                 <% } %>
@@ -187,6 +200,80 @@
                 </div>
             </main>
     </div>
+
+    <!-- Edit Budget Modal -->
+    <div class="modal" id="editBudgetModal">
+        <div class="modal-content animate-slide-up" style="max-width: 500px; padding: 2.5rem; border-radius: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
+                <div>
+                    <h2 style="font-weight: 800; color: var(--text-main); font-size: 1.5rem;">Editar Periodo</h2>
+                </div>
+                <button type="button" class="btn" style="background: none; padding: 0.5rem; color: var(--text-muted);" onclick="closeEditBudgetModal()">
+                    <i class="fas fa-times" style="font-size: 1.25rem;"></i>
+                </button>
+            </div>
+
+            <form id="editBudgetForm" method="POST">
+                <div class="form-group">
+                    <label style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; display: block; margin-bottom: 0.75rem;">Nombre del Periodo</label>
+                    <input type="text" name="name" id="editBudgetName" required style="background: var(--bg-alt); border: 2px solid transparent; border-radius: 1rem; padding: 1rem; width: 100%;">
+                </div>
+
+                <div class="form-group" style="margin-top: 1.5rem;">
+                    <label style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; display: block; margin-bottom: 0.75rem;">Monto Presupuestado (S/.)</label>
+                    <input type="number" step="0.01" name="amount" id="editBudgetAmount" required style="background: var(--bg-alt); border: 2px solid transparent; border-radius: 1rem; padding: 1rem; width: 100%; font-weight: 700; font-size: 1.25rem;">
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+                    <div class="form-group">
+                        <label style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; display: block; margin-bottom: 0.75rem;">Fecha Inicio</label>
+                        <input type="date" name="start_date" id="editBudgetStartDate" required style="background: var(--bg-alt); border: 2px solid transparent; border-radius: 1rem; padding: 1rem; width: 100%;">
+                    </div>
+                    <div class="form-group">
+                        <label style="font-size: 0.65rem; font-weight: 800; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.1em; display: block; margin-bottom: 0.75rem;">Fecha Fin</label>
+                        <input type="date" name="end_date" id="editBudgetEndDate" required style="background: var(--bg-alt); border: 2px solid transparent; border-radius: 1rem; padding: 1rem; width: 100%;">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1.25rem; font-weight: 800; margin-top: 2rem; justify-content: center; border-radius: 1rem;">
+                    <i class="fas fa-save" style="margin-right: 0.75rem;"></i> Guardar Cambios
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditBudgetModal(id, name, amount, startDate, endDate) {
+            document.getElementById('editBudgetForm').action = '/budget/edit/' + id;
+            document.getElementById('editBudgetName').value = name;
+            document.getElementById('editBudgetAmount').value = amount;
+            
+            const parseDate = (dateStr) => {
+                const d = new Date(dateStr);
+                return d.toISOString().split('T')[0];
+            };
+            
+            document.getElementById('editBudgetStartDate').value = parseDate(startDate);
+            document.getElementById('editBudgetEndDate').value = parseDate(endDate);
+            
+            document.getElementById('editBudgetModal').style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            document.body.classList.add('modal-open');
+        }
+
+        function closeEditBudgetModal() {
+            document.getElementById('editBudgetModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            document.body.classList.remove('modal-open');
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('editBudgetModal');
+            if (event.target == modal) {
+                closeEditBudgetModal();
+            }
+        }
+    </script>
 </body>
 
 </html>

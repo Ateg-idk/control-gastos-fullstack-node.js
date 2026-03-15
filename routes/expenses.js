@@ -59,4 +59,20 @@ router.post('/delete/:id', async (req, res) => {
     }
 });
 
+router.post('/edit/:id', async (req, res) => {
+    const { name, amount, date, description, category } = req.body;
+    const userId = req.session.userId;
+    try {
+        await db.query(`
+            UPDATE expenses 
+            SET name = $1, amount = $2, date = $3, description = $4, category = $5
+            WHERE id = $6 AND user_id = $7
+        `, [name, amount, date || new Date(), description || '', category || 'Otros', req.params.id, userId]);
+        res.redirect('/expenses');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;

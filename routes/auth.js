@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 
 router.get('/login', (req, res) => {
     if (req.session.isLoggedIn) return res.redirect('/dashboard');
-    res.render('login', { error: null });
+    res.render('login');
 });
 
 router.post('/login', async (req, res) => {
@@ -33,7 +33,7 @@ router.post('/login', async (req, res) => {
 
 router.get('/register', (req, res) => {
     if (req.session.isLoggedIn) return res.redirect('/dashboard');
-    res.render('register', { error: null });
+    res.render('register');
 });
 
 router.post('/register', async (req, res) => {

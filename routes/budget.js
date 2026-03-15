@@ -47,4 +47,20 @@ router.post('/close/:id', async (req, res) => {
     }
 });
 
+router.post('/edit/:id', async (req, res) => {
+    const { name, amount, start_date, end_date } = req.body;
+    const userId = req.session.userId;
+    try {
+        await db.query(`
+            UPDATE public.budget_periods
+            SET name = $1, amount = $2, start_date = $3, end_date = $4
+            WHERE id = $5 AND user_id = $6
+        `, [name, amount, start_date, end_date, req.params.id, userId]);
+        res.redirect('/budget');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;

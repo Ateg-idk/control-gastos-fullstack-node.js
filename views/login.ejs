@@ -68,6 +68,7 @@
 </head>
 
 <body>
+    <%- include('partials/error_handler') %>
     <div class="ambient-light" style="top: -100px; left: -100px;"></div>
     <div class="ambient-light" style="bottom: -100px; right: -100px; background: #818cf8;"></div>
 
@@ -82,8 +83,6 @@
                 GastosMoni</h1>
             <p style="color: var(--text-muted); font-weight: 500;">Tu ecosistema financiero inteligente</p>
         </div>
-
-        <%- include('partials/error_handler') %>
 
             <form action="/login" method="POST">
                 <div class="form-group">

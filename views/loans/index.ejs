@@ -64,53 +64,54 @@
                     </div>
                 </header>
                 <div class="stats-grid animate-slide-up" style="display: grid; gap: 1.5rem; margin-bottom: 2rem;">
+                    <% 
+                        let externalLoans = loans.filter(l => !l.from_budget);
+                        let extTotal = externalLoans.reduce((sum, l)=> sum + parseFloat(l.amount), 0);
+                        let extRecovered = externalLoans.filter(l => l.status === 'paid').reduce((sum, l) => sum + parseFloat(l.amount), 0);
+                        let extPending = extTotal - extRecovered;
 
-                    <% let totalLent=loans.reduce((sum, l)=> sum + parseFloat(l.amount), 0);
-                        let totalRecovered = loans.filter(l => l.status === 'paid').reduce((sum, l) => sum +
-                        parseFloat(l.amount), 0);
-                        let pendingRecover = totalLent - totalRecovered;
-                        %>
-                        <div class="premium-card" style="background: var(--primary); color: white; border: none;">
-                            <span
-                                style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.8; font-weight: 700;">Activo
-                                Total Prestado</span>
-                            <div style="display: flex; align-items: baseline; gap: 0.5rem; margin: 0.5rem 0;">
-                                <span style="font-size: 1.25rem; font-weight: 700;">S/</span>
-                                <h2 style="font-size: 2.5rem; font-weight: 900; letter-spacing: -0.02em;">
-                                    <%= totalLent.toFixed(2) %>
-                                </h2>
-                            </div>
-                            <div style="font-size: 0.8125rem; opacity: 0.9; font-weight: 600;">
-                                <i class="fas fa-info-circle"></i> Capital distribuido en <%= loans.length %> préstamos.
-                            </div>
+                        let budgetLoans = loans.filter(l => l.from_budget);
+                        let budTotal = budgetLoans.reduce((sum, l)=> sum + parseFloat(l.amount), 0);
+                        let budRecovered = budgetLoans.filter(l => l.status === 'paid').reduce((sum, l) => sum + parseFloat(l.amount), 0);
+                        let budPending = budTotal - budRecovered;
+                    %>
+                    <!-- External Loans block -->
+                    <div class="premium-card" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem; align-items: center; border-left: 5px solid var(--primary);">
+                        <div style="grid-column: 1 / -1;">
+                            <h3 style="font-weight: 800; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.5rem;">Cuentas Externas</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Capital de origen externo al presupuesto. (Total Prestado: S/ <%= extTotal.toFixed(2) %>)</p>
                         </div>
+                        <div style="padding-right: 1rem; border-right: 1px solid var(--border);" class="loan-stat-item">
+                            <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Cuentas Pendientes</span>
+                            <h3 style="font-size: 1.75rem; font-weight: 800; color: var(--warning);">S/ <%= extPending.toFixed(2) %></h3>
+                        </div>
+                        <div style="padding-left: 0.5rem;" class="loan-stat-item">
+                            <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Total Recuperado</span>
+                            <h3 style="font-size: 1.75rem; font-weight: 800; color: var(--success);">S/ <%= extRecovered.toFixed(2) %></h3>
+                        </div>
+                        <div style="grid-column: 1 / -1; height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden;">
+                            <div style="width: <%= (extRecovered/extTotal)*100 || 0 %>%; height: 100%; background: var(--success);"></div>
+                        </div>
+                    </div>
 
-                        <div class="premium-card"
-                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem; align-items: center;">
-                            <div style="padding-right: 1rem; border-right: 1px solid var(--border);"
-                                class="loan-stat-item">
-                                <span
-                                    style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Cuentas
-                                    Pendientes</span>
-                                <h3 style="font-size: 1.75rem; font-weight: 800; color: var(--warning);">S/ <%=
-                                        pendingRecover.toFixed(2) %>
-                                </h3>
-                            </div>
-                            <div style="padding-left: 0.5rem;" class="loan-stat-item">
-                                <span
-                                    style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Total
-                                    Recuperado</span>
-                                <h3 style="font-size: 1.75rem; font-weight: 800; color: var(--success);">S/ <%=
-                                        totalRecovered.toFixed(2) %>
-                                </h3>
-                            </div>
-                            <div
-                                style="grid-column: 1 / -1; height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden;">
-                                <div
-                                    style="width: <%= (totalRecovered/totalLent)*100 || 0 %>%; height: 100%; background: var(--success);">
-                                </div>
-                            </div>
+                    <!-- Budget Loans block -->
+                    <div class="premium-card" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem; align-items: center; border-left: 5px solid var(--info);">
+                        <div style="grid-column: 1 / -1;">
+                            <h3 style="font-weight: 800; font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.5rem;">Cuentas de Presupuesto</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Capital restado de los fondos presupuestados. (Total Prestado: S/ <%= budTotal.toFixed(2) %>)</p>
                         </div>
+                        <div style="padding-right: 1rem; border-right: 1px solid var(--border);" class="loan-stat-item">
+                            <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Cuentas Pendientes</span>
+                            <h3 style="font-size: 1.75rem; font-weight: 800; color: var(--warning);">S/ <%= budPending.toFixed(2) %></h3>
+                        </div>
+                        <div style="padding-left: 0.5rem;" class="loan-stat-item">
+                            <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Total Recuperado</span>
+                            <h3 style="font-size: 1.75rem; font-weight: 800; color: var(--success);">S/ <%= budRecovered.toFixed(2) %></h3>
+                        </div>
+                        <div style="grid-column: 1 / -1; height: 8px; background: #f1f5f9; border-radius: 99px; overflow: hidden;">
+                            <div style="width: <%= (budRecovered/budTotal)*100 || 0 %>%; height: 100%; background: var(--success);"></div>
+                        </div>
+                    </div>
                 </div>
                 <div class="premium-card animate-slide-up" style="padding: 0; overflow: hidden; animation-delay: 0.2s;">
                     <div class="table-container">
@@ -159,6 +160,10 @@
                                             </td>
                                             <td data-label="Gestión" style="text-align: center; padding-right: 1.5rem;">
                                                 <div style="display: flex; gap: 0.75rem; justify-content: center;">
+                                                    <button type="button" class="btn-action" style="background: #f1f5f9; color: var(--primary);"
+                                                        onclick="openEditLoanModal('<%= loan.id %>', '<%= loan.person_name %>', '<%= loan.amount %>', '<%= loan.date %>', '<%= loan.description %>', <%= loan.from_budget %>)">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
                                                     <form action="/loans/toggle/<%= loan.id %>" method="POST" onsubmit="showLoading()">
                                                         <button type="submit"
                                                             class="btn-action <%= loan.status === 'pending' ? 'success' : 'undo' %>"
@@ -276,6 +281,61 @@
         </div>
     </div>
 
+    <!-- Edit Loan Modal -->
+    <div id="editLoanModal" class="modal">
+        <div class="modal-content" style="max-width: 550px; border-radius: 1.5rem; border: none; padding: 2.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem;">
+                <div>
+                    <h2 style="font-weight: 800; color: var(--text-main); font-size: 1.5rem;">Editar Préstamo</h2>
+                </div>
+                <span class="close" onclick="closeEditLoanModal()"
+                    style="font-size: 1.75rem; color: var(--text-muted); cursor: pointer;">&times;</span>
+            </div>
+
+            <form id="editLoanForm" method="POST">
+                <div class="form-group">
+                    <label style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;">A favor de (Persona)</label>
+                    <input type="text" name="person_name" id="editLoanPerson" required placeholder="Prestado a"
+                        style="padding: 1rem; border-radius: 0.75rem; font-weight: 600;">
+                </div>
+
+                <div class="responsive-modal-grid">
+                    <div class="form-group">
+                        <label style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;">Monto (S/)</label>
+                        <input type="number" step="0.01" name="amount" id="editLoanAmount" required placeholder="0.00"
+                            style="padding: 1rem; border-radius: 0.75rem; font-weight: 800; font-size: 1.1rem;">
+                    </div>
+                    <div class="form-group">
+                        <label style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;">Fuente</label>
+                        <select name="from_budget" id="editLoanSource"
+                            style="padding: 1rem 0.5rem; border-radius: 0.75rem; font-weight: 600; background: var(--bg-alt); text-overflow: ellipsis;">
+                            <option value="false">Externo</option>
+                            <option value="true">Presupuesto</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;">Fecha</label>
+                        <input type="date" name="date" id="editLoanDate" required
+                            style="padding: 1rem; border-radius: 0.75rem;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; letter-spacing: 0.05em;">Descripción / Notas</label>
+                    <textarea name="description" id="editLoanDesc" rows="3" placeholder="Opcional..."
+                        style="padding: 1rem; border-radius: 0.75rem; font-family: inherit; font-size: 0.9rem;"></textarea>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn btn-primary"
+                        style="width: 100%; justify-content: center; padding: 1.25rem; border-radius: 1rem; font-size: 1rem; font-weight: 700;">
+                        <i class="fas fa-save" style="margin-right: 0.5rem;"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function confirmDeleteLoan(btn) {
             const id = btn.getAttribute('data-id');
@@ -304,11 +364,40 @@
 
         function toggleModal(id) {
             const modal = document.getElementById(id);
-            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            } else {
+                modal.style.display = 'flex';
+                document.body.classList.add('modal-open');
+            }
         }
+
+        function openEditLoanModal(id, person, amount, dateStr, desc, fromBudget) {
+            document.getElementById('editLoanForm').action = '/loans/edit/' + id;
+            document.getElementById('editLoanPerson').value = person;
+            document.getElementById('editLoanAmount').value = amount;
+            
+            const parseDate = (d) => {
+                return new Date(d).toISOString().split('T')[0];
+            };
+            document.getElementById('editLoanDate').value = parseDate(dateStr);
+            document.getElementById('editLoanDesc').value = desc;
+            document.getElementById('editLoanSource').value = fromBudget ? 'true' : 'false';
+
+            document.getElementById('editLoanModal').style.display = 'flex';
+            document.body.classList.add('modal-open');
+        }
+
+        function closeEditLoanModal() {
+            document.getElementById('editLoanModal').style.display = 'none';
+            document.body.classList.remove('modal-open');
+        }
+
         window.onclick = function (event) {
-            if (event.target.className === 'modal') {
+            if (event.target.className.includes('modal')) {
                 event.target.style.display = "none";
+                document.body.classList.remove('modal-open');
             }
         }
     </script>

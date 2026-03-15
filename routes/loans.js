@@ -112,4 +112,40 @@ router.post('/delete/:id', async (req, res) => {
     }
 });
 
+router.post('/edit/:id', async (req, res) => {
+    const { person_name, amount, date, description, from_budget } = req.body;
+    const userId = req.session.userId;
+    const isFromBudget = from_budget === 'true';
+
+    try {
+        await db.query('BEGIN');
+
+        const loanRes = await db.query('SELECT * FROM loans WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        if (loanRes.rows.length > 0) {
+            const oldLoan = loanRes.rows[0];
+
+            await db.query(`
+                UPDATE loans 
+                SET person_name = $1, amount = $2, date = $3, description = $4, from_budget = $5
+                WHERE id = $6 AND user_id = $7
+            `, [person_name, amount, date || new Date(), description || '', isFromBudget, req.params.id, userId]);
+
+            if (oldLoan.from_budget && isFromBudget && oldLoan.status === 'pending') {
+                await db.query(`
+                    UPDATE expenses 
+                    SET amount = $1, name = $2 
+                    WHERE user_id = $3 AND category = 'Préstamo' AND name = $4
+                `, [amount, `Préstamo a ${person_name}`, userId, `Préstamo a ${oldLoan.person_name}`]);
+            }
+        }
+
+        await db.query('COMMIT');
+        res.redirect('/loans?updated=true');
+    } catch (err) {
+        await db.query('ROLLBACK');
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
