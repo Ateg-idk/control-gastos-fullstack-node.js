@@ -31,6 +31,12 @@
                 class="nav-item <%= typeof activePage !== 'undefined' && activePage === 'add-expense' ? 'active' : '' %>">
                 <a href="/expenses/add" class="nav-link"><i class="fas fa-plus-square"></i> Nuevo Gasto</a>
             </li>
+            <% if (typeof role !== 'undefined' && role === 'ADMIN') { %>
+            <li
+                class="nav-item <%= typeof activePage !== 'undefined' && activePage === 'users' ? 'active' : '' %>">
+                <a href="/dashboard/users" class="nav-link"><i class="fas fa-users-cog"></i> Usuarios</a>
+            </li>
+            <% } %>
         </ul>
     </nav>
 

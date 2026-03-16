@@ -39,8 +39,8 @@ router.get('/', async (req, res) => {
             .reduce((sum, l) => sum + parseFloat(l.amount), 0);
 
         const totalRecoveredThisPeriod = loans
-            .filter(l => l.from_budget && l.status === 'paid' && l.payment_date && new Date(l.payment_date) >= new Date(activePeriod.start_date) && new Date(l.payment_date) <= new Date(activePeriod.end_date))
-            .reduce((sum, l) => sum + parseFloat(l.amount), 0);
+            .filter(l => l.from_budget && new Date(l.date) >= new Date(activePeriod.start_date) && new Date(l.date) <= new Date(activePeriod.end_date))
+            .reduce((sum, l) => sum + parseFloat(l.paid_amount || 0), 0);
 
         const totalSpent = totalRegularSpent + totalLentThisPeriod - totalRecoveredThisPeriod;
         const balance = budget - totalSpent;
@@ -60,10 +60,9 @@ router.get('/', async (req, res) => {
 
         const totalPendingLoans = loans
             .filter(l => l.status === 'pending')
-            .reduce((sum, l) => sum + parseFloat(l.amount), 0);
+            .reduce((sum, l) => sum + (parseFloat(l.amount) - parseFloat(l.paid_amount || 0)), 0);
         const totalPaidLoans = loans
-            .filter(l => l.status === 'paid')
-            .reduce((sum, l) => sum + parseFloat(l.amount), 0);
+            .reduce((sum, l) => sum + parseFloat(l.paid_amount || 0), 0);
 
         res.render('dashboard', {
             budget,
@@ -80,6 +79,44 @@ router.get('/', async (req, res) => {
             dateRange,
             username: req.session.username
         });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+// ADMIN ROUTES
+router.get('/users', async (req, res) => {
+    if (req.session.role !== 'ADMIN') return res.status(403).send('Acceso denegado');
+    try {
+        const usersRes = await db.query('SELECT id, username, email, phone, role, is_active, expires_at FROM users ORDER BY id ASC');
+        res.render('dashboard/users', {
+            username: req.session.username,
+            users: usersRes.rows
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+router.post('/users/toggle/:id', async (req, res) => {
+    if (req.session.role !== 'ADMIN') return res.status(403).send('Acceso denegado');
+    try {
+        await db.query('UPDATE users SET is_active = NOT is_active WHERE id = $1', [req.params.id]);
+        res.redirect('/dashboard/users');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+router.post('/users/expire/:id', async (req, res) => {
+    if (req.session.role !== 'ADMIN') return res.status(403).send('Acceso denegado');
+    try {
+        const expiresAt = req.body.expires_at || null;
+        await db.query('UPDATE users SET expires_at = $1 WHERE id = $2', [expiresAt, req.params.id]);
+        res.redirect('/dashboard/users');
     } catch (err) {
         console.error(err);
         res.status(500).send('Server Error');

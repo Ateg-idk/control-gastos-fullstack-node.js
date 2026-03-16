@@ -27,6 +27,35 @@
                     </div>
                 </header>
 
+                <!-- Daily and Weekly Stats -->
+                <div class="stats-grid animate-slide-up" style="margin-bottom: 2rem; gap: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                    <div class="premium-card" style="border-top: 5px solid var(--danger); cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/expenses?filter=today'" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                        <div class="stat-header" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="stat-icon" style="background: #fee2e2; color: var(--danger); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                <i class="fas fa-calendar-day"></i>
+                            </div>
+                            <span class="stat-label" style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;"><%= statsLabels ? statsLabels.day : 'Gastos de Hoy' %></span>
+                        </div>
+                        <h2 class="stat-value" style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/ <%= typeof dailyTotal !== 'undefined' ? dailyTotal.toFixed(2) : '0.00' %></h2>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
+                            Total registrado en el transcurso de hoy
+                        </p>
+                    </div>
+
+                    <div class="premium-card" style="border-top: 5px solid var(--warning); cursor: pointer; transition: transform 0.2s;" onclick="window.location.href='/expenses?filter=week'" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                        <div class="stat-header" style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="stat-icon" style="background: #fef3c7; color: var(--warning); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                <i class="fas fa-calendar-week"></i>
+                            </div>
+                            <span class="stat-label" style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;"><%= statsLabels ? statsLabels.week : 'Gastos de la Semana' %></span>
+                        </div>
+                        <h2 class="stat-value" style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/ <%= typeof weeklyTotal !== 'undefined' ? weeklyTotal.toFixed(2) : '0.00' %></h2>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
+                            Acumulado de Lunes a Domingo
+                        </p>
+                    </div>
+                </div>
+
                 <!-- Professional Filters -->
                 <div class="premium-card animate-slide-up"
                     style="margin-bottom: 2rem; padding: 1.5rem; animation-delay: 0.1s;">
@@ -46,19 +75,29 @@
                         </div>
                         <div class="form-group" style="flex: 1; margin-bottom: 0;">
                             <label
-                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Período</label>
-                            <input type="month" name="month" value="<%= filters.month || '' %>"
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Día Específico</label>
+                            <input type="date" name="day" value="<%= filters.day || '' %>"
+                                style="border-radius: 0.75rem;">
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Semana Específica</label>
+                            <input type="week" name="week" value="<%= filters.week || '' %>"
                                 style="border-radius: 0.75rem;">
                         </div>
                         <div style="display: flex; gap: 0.75rem;">
                             <button type="submit" class="btn btn-primary"
                                 style="padding: 0.75rem 1.5rem; border-radius: 0.75rem;">
-                                <i class="fas fa-filter"></i> Filtrar
+                                <i class="fas fa-search"></i> Buscar
                             </button>
-                            <% if (filters.search || filters.month) { %>
-                                <a href="/expenses" class="btn"
-                                    style="background: var(--bg-alt); color: var(--text-main); font-weight: 700; border-radius: 0.75rem; padding: 0.75rem;">
-                                    <i class="fas fa-undo"></i>
+                            <a href="/expenses?filter=week" class="btn"
+                                style="background: <%= filters.filter==='week' ? 'var(--primary)' : 'var(--bg-alt)' %>; color: <%= filters.filter==='week' ? 'white' : 'var(--text-main)' %>; font-weight: 700; border-radius: 0.75rem; padding: 0.75rem 1.5rem;">
+                                <i class="fas fa-calendar-week"></i> Esta Semana
+                            </a>
+                            <% if (filters.search || filters.day || filters.week || filters.filter === 'today') { %>
+                                <a href="/expenses?filter=all" class="btn" title="Mostrar Todos"
+                                    style="background: var(--bg-alt); color: var(--text-main); font-weight: 700; border-radius: 0.75rem; padding: 0.75rem 1rem;">
+                                    Todos
                                 </a>
                                 <% } %>
                         </div>
@@ -80,7 +119,20 @@
                             </thead>
                             <tbody>
                                 <% if (expenses && expenses.length> 0) { %>
+                                    <% let lastExpDate = null; %>
                                     <% expenses.forEach(exp=> { %>
+                                        <% 
+                                            const currentExpDate = new Date(exp.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }); 
+                                            if (lastExpDate !== currentExpDate) { 
+                                        %>
+                                            <tr style="background: var(--bg-alt);">
+                                                <td colspan="5" style="padding: 0.75rem 1.5rem; font-weight: 800; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                                    <i class="fas fa-calendar-alt" style="margin-right: 0.5rem;"></i> <%= currentExpDate %>
+                                                </td>
+                                            </tr>
+                                        <%      lastExpDate = currentExpDate; 
+                                            } 
+                                        %>
                                         <tr>
                                             <td style="padding-left: 1.5rem;" data-label="Fecha">
                                                 <div
@@ -157,6 +209,30 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <% if (typeof pagination !== 'undefined' && pagination.totalPages > 1) { %>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-top: 1px solid var(--border);">
+                        <% if (pagination.currentPage > 1) { %>
+                            <a href="/expenses?page=<%= pagination.currentPage - 1 %><%= filters.search ? '&search='+filters.search : '' %><%= filters.day ? '&day='+filters.day : '' %><%= filters.week ? '&week='+filters.week : '' %><%= filters.filter ? '&filter='+filters.filter : '' %>" class="btn" style="background: var(--bg-alt); padding: 0.75rem 1.25rem; border-radius: 0.75rem; color: var(--text-main); font-weight: 700;">
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </a>
+                        <% } else { %>
+                            <div></div>
+                        <% } %>
+                        
+                        <span style="font-size: 0.85rem; font-weight: 800; color: var(--text-muted); padding: 0 1rem; background: var(--bg-alt); padding: 0.5rem 1rem; border-radius: 2rem;">
+                            Página <%= pagination.currentPage %> de <%= pagination.totalPages %>
+                        </span>
+
+                        <% if (pagination.currentPage < pagination.totalPages) { %>
+                            <a href="/expenses?page=<%= pagination.currentPage + 1 %><%= filters.search ? '&search='+filters.search : '' %><%= filters.day ? '&day='+filters.day : '' %><%= filters.week ? '&week='+filters.week : '' %><%= filters.filter ? '&filter='+filters.filter : '' %>" class="btn" style="background: var(--bg-alt); padding: 0.75rem 1.25rem; border-radius: 0.75rem; color: var(--text-main); font-weight: 700;">
+                                Siguiente <i class="fas fa-chevron-right"></i>
+                            </a>
+                        <% } else { %>
+                            <div></div>
+                        <% } %>
+                    </div>
+                    <% } %>
                 </div>
             </main>
     </div>
@@ -195,7 +271,7 @@
                     <div class="form-group">
                         <label
                             style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.1em;">Fecha</label>
-                        <input type="date" name="date" required value="<%= new Date().toISOString().split('T')[0] %>"
+                        <input type="date" name="date" required value="<%= typeof todayDate !== 'undefined' ? todayDate : new Date().toISOString().split('T')[0] %>"
                             style="padding: 1rem; border-radius: 0.75rem;">
                     </div>
 

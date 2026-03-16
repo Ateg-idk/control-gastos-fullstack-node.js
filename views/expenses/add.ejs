@@ -50,10 +50,9 @@
 
                             <div class="form-group">
                                 <label
-                                    style="text-transform: uppercase; font-size: 0.75rem; color: var(--text-muted); letter-spacing: 0.1em;">Fecha
-                                    del Gasto</label>
-                                <input type="date" name="date" value="<%= new Date().toISOString().split('T')[0] %>"
-                                    style="padding: 1rem; font-weight: 600;">
+                                    style="text-transform: uppercase; font-size: 0.65rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.1em;">Fecha</label>
+                                <input type="date" name="date" required value="<%= typeof todayDate !== 'undefined' ? todayDate : new Date().toISOString().split('T')[0] %>"
+                                    style="padding: 1rem; border-radius: 0.75rem;">
                             </div>
 
                             <div class="form-group" style="grid-column: span 2;">

@@ -24,6 +24,8 @@ app.use(session({
 app.use((req, res, next) => {
     res.locals.error = req.session.error || null;
     res.locals.success = req.session.success || null;
+    res.locals.role = req.session.role || null;
+    res.locals.todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
     delete req.session.error;
     delete req.session.success;
     next();

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Usuarios - GastosMoni</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container" style="display: flex; min-height: 100vh;">
+        <%- include('../partials/sidebar', { activePage: 'users' }) %>
+
+            <main class="main-content">
+                <header class="top-nav animate-slide-up">
+                    <div class="welcome-text">
+                        <h1>Gestión de Usuarios</h1>
+                        <p>Administra los accesos y permisos de todos los registrados.</p>
+                    </div>
+                </header>
+
+                <div class="premium-card animate-slide-up" style="padding: 0; overflow: hidden; margin-top: 2rem;">
+                    <div class="table-container">
+                        <table class="data-table mobile-cards">
+                            <thead>
+                                <tr>
+                                    <th style="padding-left: 1.5rem;">Usuario</th>
+                                    <th>Rol</th>
+                                    <th style="text-align: center;">Estado</th>
+                                    <th>Vencimiento</th>
+                                    <th style="text-align: center; padding-right: 1.5rem;">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% users.forEach(user=> { %>
+                                    <tr>
+                                        <td style="padding-left: 1.5rem;" data-label="Usuario">
+                                            <div
+                                                style="font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 0.75rem;">
+                                                <div
+                                                    style="width: 32px; height: 32px; background: var(--primary-light); color: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.9rem;">
+                                                    <%= user.username.charAt(0).toUpperCase() %>
+                                                </div>
+                                                <div>
+                                                    <div style="line-height: 1.2;">
+                                                        <%= user.username %>
+                                                    </div>
+                                                    <% if (user.email) { %>
+                                                        <div
+                                                            style="font-size: 0.65rem; color: var(--text-muted); font-weight: 500; margin-top: 0.15rem;">
+                                                            <i class="fas fa-envelope"
+                                                                style="margin-right: 0.25rem;"></i>
+                                                            <%= user.email %>
+                                                        </div>
+                                                        <% } %>
+                                                            <% if (user.phone) { %>
+                                                                <div
+                                                                    style="font-size: 0.65rem; color: var(--text-muted); font-weight: 500; margin-top: 0.15rem;">
+                                                                    <i class="fas fa-phone"
+                                                                        style="margin-right: 0.25rem;"></i>
+                                                                    <%= user.phone %>
+                                                                </div>
+                                                                <% } %>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td data-label="Rol">
+                                            <span class="badge"
+                                                style="background: <%= user.role === 'ADMIN' ? 'rgba(99, 102, 241, 0.1)' : 'var(--bg-alt)' %>; color: <%= user.role === 'ADMIN' ? 'var(--primary)' : 'var(--text-muted)' %>; padding: 0.25rem 0.5rem;">
+                                                <i
+                                                    class="fas <%= user.role === 'ADMIN' ? 'fa-shield' : 'fa-user' %>"></i>
+                                                <%= user.role %>
+                                            </span>
+                                        </td>
+                                        <td style="text-align: center;" data-label="Estado">
+                                            <span class="badge"
+                                                style="background: <%= user.is_active ? '#dcfce7' : '#fee2e2' %>; color: <%= user.is_active ? '#166534' : '#991b1b' %>;">
+                                                <%= user.is_active ? 'Activo' : 'Pendiente' %>
+                                            </span>
+                                        </td>
+                                        <td data-label="Vencimiento">
+                                            <% if (user.role==='ADMIN' ) { %>
+                                                <span
+                                                    style="font-size: 0.75rem; color: var(--success); font-weight: 700;"><i
+                                                        class="fas fa-infinity"></i> Ilimitado</span>
+                                                <% } else { %>
+                                                    <form action="/dashboard/users/expire/<%= user.id %>" method="POST"
+                                                        style="display: flex; gap: 0.5rem; align-items: center;">
+                                                        <input type="date" name="expires_at"
+                                                            value="<%= user.expires_at ? new Date(user.expires_at).toISOString().split('T')[0] : '' %>"
+                                                            style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border); background: var(--bg-alt); color: var(--text-main);">
+                                                        <button type="submit" class="action-btn" title="Guardar Fechas"
+                                                            style="width: 28px; height: 28px; background: rgba(99, 102, 241, 0.1); color: var(--primary);">
+                                                            <i class="fas fa-save" style="font-size: 0.8rem;"></i>
+                                                        </button>
+                                                    </form>
+                                                    <% if (!user.expires_at) { %>
+                                                        <div
+                                                            style="font-size: 0.65rem; color: var(--text-muted); margin-top: 0.25rem;">
+                                                            Ilimitado actualmente</div>
+                                                        <% } %>
+                                                            <% } %>
+                                        </td>
+                                        <td style="text-align: center; padding-right: 1.5rem;" data-label="Acción">
+                                            <form id="toggle-form-<%= user.id %>" action="/dashboard/users/toggle/<%= user.id %>" method="POST"
+                                                style="display: inline-block;">
+                                                <button type="button" 
+                                                    data-id="<%= user.id %>" 
+                                                    data-active="<%= user.is_active %>" 
+                                                    data-username="<%= user.username %>"
+                                                    onclick="handleToggle(this)"
+                                                    title="<%= user.is_active ? 'Desactivar Usuario' : 'Activar Usuario' %>"
+                                                    style="border: none; cursor: pointer; padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 700; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.5rem; transition: all 0.2s ease; background: <%= user.is_active ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)' %>; color: <%= user.is_active ? 'var(--danger)' : 'var(--success)' %>;">
+                                                    <i class="fas <%= user.is_active ? 'fa-ban' : 'fa-check' %>"></i>
+                                                    <%= user.is_active ? 'Bloquear' : 'Activar' %>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        function handleToggle(buttonEl) {
+            const userId = buttonEl.getAttribute('data-id');
+            const isActive = buttonEl.getAttribute('data-active') === 'true';
+            const username = buttonEl.getAttribute('data-username');
+
+            const actionText = isActive ? 'bloquear el acceso' : 'conceder el acceso';
+            const actionColor = isActive ? '#ef4444' : '#22c55e';
+            const actionConfirm = isActive ? 'Sí, Bloquear' : 'Sí, Activar';
+
+            Swal.fire({
+                title: '¿Estás seguro?',
+                html: `Vas a <b>${actionText}</b> al usuario <b style="color: var(--primary);">${username}</b>.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: actionColor,
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: actionConfirm,
+                cancelButtonText: 'Cancelar',
+                background: '#ffffff',
+                color: '#0f172a',
+                borderRadius: '1.25rem'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById(`toggle-form-${userId}`).submit();
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

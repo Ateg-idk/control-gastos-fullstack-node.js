@@ -22,14 +22,15 @@ router.post('/add', async (req, res) => {
     const isFromBudget = from_budget === 'true';
 
     try {
+        const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
         await db.query('BEGIN');
 
         await db.query('INSERT INTO loans (user_id, person_name, amount, date, description, from_budget) VALUES ($1, $2, $3, $4, $5, $6)',
-            [userId, person_name, amount, date || new Date(), description || '', isFromBudget]);
+            [userId, person_name, amount, date || todayDate, description || '', isFromBudget]);
 
         if (isFromBudget) {
             await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
-                [userId, `Préstamo a ${person_name}`, amount, date || new Date(), `Capital restado del presupuesto: ${description}`, 'Préstamo']);
+                [userId, `Préstamo a ${person_name}`, amount, date || todayDate, `Capital restado del presupuesto: ${description}`, 'Préstamo']);
         }
 
         await db.query('COMMIT');
@@ -41,33 +42,68 @@ router.post('/add', async (req, res) => {
     }
 });
 
-router.post('/toggle/:id', async (req, res) => {
+router.post('/pay/:id', async (req, res) => {
+    const userId = req.session.userId;
+    const paymentAmount = parseFloat(req.body.amount || 0);
+
+    try {
+        if (paymentAmount <= 0) return res.redirect('/loans');
+
+        const loanRes = await db.query('SELECT * FROM loans WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        if (loanRes.rows.length > 0) {
+            const loan = loanRes.rows[0];
+            if (loan.status === 'paid') return res.redirect('/loans');
+
+            const currentPaid = parseFloat(loan.paid_amount || 0);
+            const totalAmount = parseFloat(loan.amount);
+            let newPaid = currentPaid + paymentAmount;
+
+            if (newPaid > totalAmount) newPaid = totalAmount;
+
+            const actualPayment = newPaid - currentPaid;
+            const newStatus = newPaid >= totalAmount ? 'paid' : 'pending';
+            const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+
+            await db.query('BEGIN');
+            await db.query('UPDATE loans SET paid_amount = $1, status = $2, payment_date = $3 WHERE id = $4 AND user_id = $5',
+                [newPaid, newStatus, newStatus === 'paid' ? todayDate : null, req.params.id, userId]);
+
+            if (loan.from_budget && actualPayment > 0) {
+                await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
+                    [userId, `Abono Préstamo: ${loan.person_name}`, -actualPayment, todayDate, `Abono de S/ ${actualPayment.toFixed(2)} por préstamo del ${new Date(loan.date).toLocaleDateString('es-ES')}`, 'Préstamo']);
+            }
+            await db.query('COMMIT');
+        }
+        res.redirect('/loans?updated=true');
+    } catch (err) {
+        await db.query('ROLLBACK');
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
+router.post('/undo/:id', async (req, res) => {
     const userId = req.session.userId;
     try {
         const loanRes = await db.query('SELECT * FROM loans WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
         if (loanRes.rows.length > 0) {
             const loan = loanRes.rows[0];
-            const newStatus = loan.status === 'pending' ? 'paid' : 'pending';
+            const paidAmount = parseFloat(loan.paid_amount || 0);
 
             await db.query('BEGIN');
+            await db.query('UPDATE loans SET status = $1, payment_date = NULL, paid_amount = 0 WHERE id = $2 AND user_id = $3',
+                ['pending', req.params.id, userId]);
 
-            await db.query('UPDATE loans SET status = $1, payment_date = $2 WHERE id = $3 AND user_id = $4',
-                [newStatus, newStatus === 'paid' ? new Date() : null, req.params.id, userId]);
-
-            if (loan.from_budget) {
-                if (newStatus === 'paid') {
-                    await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
-                        [userId, `Cobro Préstamo: ${loan.person_name}`, -parseFloat(loan.amount), new Date(), `Recuperación de capital por préstamo realizado el ${new Date(loan.date).toLocaleDateString()}`, 'Préstamo']);
-                } else {
-                    await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
-                        [userId, `Extorno Cobro: ${loan.person_name}`, parseFloat(loan.amount), new Date(), `Re-apertura de deuda pendiente`, 'Préstamo']);
-                }
+            if (loan.from_budget && paidAmount > 0) {
+                const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+                await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
+                    [userId, `Extorno Cobro: ${loan.person_name}`, paidAmount, todayDate, `Re-apertura de deuda pendiente`, 'Préstamo']);
             }
-
             await db.query('COMMIT');
         }
         res.redirect('/loans?updated=true');
     } catch (err) {
+        await db.query('ROLLBACK');
         console.error(err);
         res.status(500).send('Server Error');
     }
@@ -81,24 +117,13 @@ router.post('/delete/:id', async (req, res) => {
             const loan = loanRes.rows[0];
 
             await db.query('BEGIN');
-
-            // Delete the master loan
             await db.query('DELETE FROM loans WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
 
-            // Budget adjustment logic upon deletion
             if (loan.from_budget) {
                 if (loan.status === 'pending') {
-                    // It was pending, so it was "subtracting" from the budget. 
-                    // To cancel it, we restore the money.
                     await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
                         [userId, `Cancelación Préstamo: ${loan.person_name}`, -parseFloat(loan.amount), new Date(), `Restauración por préstamo eliminado`, 'Préstamo']);
                 } else if (loan.status === 'paid') {
-                    // It was already paid, so balance was restored.
-                    // Deleting the loan might imply we want to remove the "repayment" revenue too?
-                    // User says the loan Master Record is the source of truth.
-                    // If we delete a PAID loan, we should probably ensure the "Final Balance" remains consistent.
-                    // However, normally people delete loans to "undo" them.
-                    // For now, let's stick to the user's focus: "si borro ahí recién se descuenta".
                 }
             }
 
@@ -118,6 +143,7 @@ router.post('/edit/:id', async (req, res) => {
     const isFromBudget = from_budget === 'true';
 
     try {
+        const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
         await db.query('BEGIN');
 
         const loanRes = await db.query('SELECT * FROM loans WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
@@ -128,7 +154,7 @@ router.post('/edit/:id', async (req, res) => {
                 UPDATE loans 
                 SET person_name = $1, amount = $2, date = $3, description = $4, from_budget = $5
                 WHERE id = $6 AND user_id = $7
-            `, [person_name, amount, date || new Date(), description || '', isFromBudget, req.params.id, userId]);
+            `, [person_name, amount, date || todayDate, description || '', isFromBudget, req.params.id, userId]);
 
             if (oldLoan.from_budget && isFromBudget && oldLoan.status === 'pending') {
                 await db.query(`
