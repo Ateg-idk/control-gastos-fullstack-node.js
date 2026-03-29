@@ -11,6 +11,7 @@ router.get('/', async (req, res) => {
 
         const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
         const PET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+        PET.setHours(12, 0, 0, 0);
         const currentDay = PET.getDay();
         const diff = PET.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
         const currentStartOfWeek = new Date(PET.setDate(diff)).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
@@ -20,7 +21,7 @@ router.get('/', async (req, res) => {
 
         let statsTargetDay = todayDate;
         let statsTargetWeekStart = currentStartOfWeek;
-        const tempPET = new Date(new Date(currentStartOfWeek).toLocaleString('en-US', { timeZone: 'America/Lima' }));
+        const tempPET = new Date(currentStartOfWeek + 'T12:00:00');
         let statsTargetWeekEnd = new Date(tempPET.setDate(tempPET.getDate() + 6)).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
         if (filter === 'today') {
@@ -36,7 +37,7 @@ router.get('/', async (req, res) => {
             statsTargetDay = dayFilter;
         } else if (isValidWeek(weekFilter)) {
             const [year, week] = weekFilter.split('-W').map(Number);
-            const d = new Date(year, 0, 1);
+            const d = new Date(year, 0, 1, 12, 0, 0); // Use noon to avoid TZ slides
             const dw = d.getDay();
             d.setDate(d.getDate() - dw + (dw === 0 ? -6 : 1) + (week - 1) * 7);
             statsTargetWeekStart = d.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
@@ -83,8 +84,8 @@ router.get('/', async (req, res) => {
             filters: { search, day: isValidDate(dayFilter) ? dayFilter : '', week: isValidWeek(weekFilter) ? weekFilter : '', filter: filter || (!search && !dayFilter && !weekFilter ? 'week' : '') },
             pagination: { currentPage, totalPages, totalRecords },
             statsLabels: {
-                day: isValidDate(dayFilter) ? 'Día Seleccionado (v2)' : 'Gastos de Hoy (v2)',
-                week: isValidWeek(weekFilter) ? 'Semana Seleccionada (v2)' : 'Gastos de la Semana (v2)',
+                day: isValidDate(dayFilter) ? 'Día Seleccionado' : 'Gastos de Hoy',
+                week: isValidWeek(weekFilter) ? 'Semana Seleccionada' : 'Gastos de la Semana',
                 weekRange: { start: statsTargetWeekStart, end: statsTargetWeekEnd }
             }
         });
