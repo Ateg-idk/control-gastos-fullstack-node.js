@@ -83,8 +83,8 @@ router.get('/', async (req, res) => {
             filters: { search, day: isValidDate(dayFilter) ? dayFilter : '', week: isValidWeek(weekFilter) ? weekFilter : '', filter: filter || (!search && !dayFilter && !weekFilter ? 'week' : '') },
             pagination: { currentPage, totalPages, totalRecords },
             statsLabels: {
-                day: isValidDate(dayFilter) ? 'Día Seleccionado' : 'Gastos de Hoy',
-                week: isValidWeek(weekFilter) ? 'Semana Seleccionada' : 'Gastos de la Semana',
+                day: isValidDate(dayFilter) ? 'Día Seleccionado (v2)' : 'Gastos de Hoy (v2)',
+                week: isValidWeek(weekFilter) ? 'Semana Seleccionada (v2)' : 'Gastos de la Semana (v2)',
                 weekRange: { start: statsTargetWeekStart, end: statsTargetWeekEnd }
             }
         });
