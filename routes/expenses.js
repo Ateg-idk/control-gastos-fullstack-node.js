@@ -20,7 +20,8 @@ router.get('/', async (req, res) => {
 
         let statsTargetDay = todayDate;
         let statsTargetWeekStart = currentStartOfWeek;
-        let statsTargetWeekEnd = null; 
+        const tempPET = new Date(new Date(currentStartOfWeek).toLocaleString('en-US', { timeZone: 'America/Lima' }));
+        let statsTargetWeekEnd = new Date(tempPET.setDate(tempPET.getDate() + 6)).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
         if (filter === 'today') {
             baseQuery += ' AND date = $' + (params.length + 1);
@@ -29,7 +30,6 @@ router.get('/', async (req, res) => {
             baseQuery += ' AND date >= $' + (params.length + 1);
             params.push(currentStartOfWeek);
         } else if (filter === 'all') {
-            // No date bound limit
         } else if (isValidDate(dayFilter)) {
             baseQuery += ' AND date = $' + (params.length + 1);
             params.push(dayFilter);
@@ -46,7 +46,6 @@ router.get('/', async (req, res) => {
             baseQuery += ' AND date >= $' + (params.length + 1) + ' AND date <= $' + (params.length + 2);
             params.push(statsTargetWeekStart, statsTargetWeekEnd);
         } else if (!search) {
-            // Default to current week to prevent huge lists
             baseQuery += ' AND date >= $' + (params.length + 1);
             params.push(currentStartOfWeek);
         }
@@ -55,21 +54,15 @@ router.get('/', async (req, res) => {
             baseQuery += ' AND name ILIKE $' + (params.length + 1);
             params.push(`%${search}%`);
         }
-
-        // Count for pagination
         const countRes = await db.query('SELECT COUNT(*)' + baseQuery, params);
         const totalRecords = parseInt(countRes.rows[0].count);
         const limit = 20;
         const totalPages = Math.ceil(totalRecords / limit) || 1;
         const currentPage = Math.max(1, Math.min(parseInt(page) || 1, totalPages));
         const offset = (currentPage - 1) * limit;
-
-        // Fetch paginated data
         const dataQuery = 'SELECT *' + baseQuery + ' ORDER BY date DESC, id DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
         const paramsWithPagination = [...params, limit, offset];
         const expensesRes = await db.query(dataQuery, paramsWithPagination);
-
-        // Fetch user stats dynamically
         let statsQuery = `
             SELECT 
                 COALESCE(SUM(CASE WHEN date = $2 THEN amount ELSE 0 END), 0) as daily_total,
@@ -91,7 +84,8 @@ router.get('/', async (req, res) => {
             pagination: { currentPage, totalPages, totalRecords },
             statsLabels: {
                 day: isValidDate(dayFilter) ? 'Día Seleccionado' : 'Gastos de Hoy',
-                week: isValidWeek(weekFilter) ? 'Semana Seleccionada' : 'Gastos de la Semana'
+                week: isValidWeek(weekFilter) ? 'Semana Seleccionada' : 'Gastos de la Semana',
+                weekRange: { start: statsTargetWeekStart, end: statsTargetWeekEnd }
             }
         });
     } catch (err) {
