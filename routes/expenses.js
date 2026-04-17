@@ -37,7 +37,7 @@ router.get('/', async (req, res) => {
             statsTargetDay = dayFilter;
         } else if (isValidWeek(weekFilter)) {
             const [year, week] = weekFilter.split('-W').map(Number);
-            const d = new Date(year, 0, 1, 12, 0, 0); // Use noon to avoid TZ slides
+            const d = new Date(year, 0, 1, 12, 0, 0);
             const dw = d.getDay();
             d.setDate(d.getDate() - dw + (dw === 0 ? -6 : 1) + (week - 1) * 7);
             statsTargetWeekStart = d.toLocaleDateString('en-CA', { timeZone: 'America/Lima' });

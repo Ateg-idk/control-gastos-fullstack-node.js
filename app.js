@@ -43,12 +43,14 @@ const authRoutes = require('./routes/auth');
 const expenseRoutes = require('./routes/expenses');
 const budgetRoutes = require('./routes/budget');
 const loanRoutes = require('./routes/loans');
+const fixedCostsRoutes = require('./routes/fixed_costs');
 
 app.use('/', authRoutes);
 app.use('/dashboard', isAuthenticated, dashboardRoutes);
 app.use('/expenses', isAuthenticated, expenseRoutes);
 app.use('/budget', isAuthenticated, budgetRoutes);
 app.use('/loans', isAuthenticated, loanRoutes);
+app.use('/fixed-costs', isAuthenticated, fixedCostsRoutes);
 
 app.get('/', (req, res) => {
     if (req.session.isLoggedIn) {

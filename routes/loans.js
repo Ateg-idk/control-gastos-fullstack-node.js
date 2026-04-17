@@ -4,11 +4,59 @@ const db = require('../lib/db');
 
 router.get('/', async (req, res) => {
     const userId = req.session.userId;
+    const { search, source, sort, page } = req.query;
+    
     try {
-        const result = await db.query('SELECT * FROM loans WHERE user_id = $1 ORDER BY date DESC, id DESC', [userId]);
+        // Overall Stats (Always based on total data for the user)
+        const statsRes = await db.query('SELECT * FROM loans WHERE user_id = $1', [userId]);
+        const overallLoans = statsRes.rows;
+
+        // Filtering Logic
+        let whereClause = ' WHERE user_id = $1';
+        let params = [userId];
+
+        if (search) {
+            whereClause += ' AND person_name ILIKE $' + (params.length + 1);
+            params.push(`%${search}%`);
+        }
+
+        if (source === 'budget') {
+            whereClause += ' AND from_budget = true';
+        } else if (source === 'external') {
+            whereClause += ' AND from_budget = false';
+        }
+
+        // Count for pagination
+        const countRes = await db.query('SELECT COUNT(*) FROM loans' + whereClause, params);
+        const totalRecords = parseInt(countRes.rows[0].count);
+        const limit = 10;
+        const totalPages = Math.ceil(totalRecords / limit) || 1;
+        const currentPage = Math.max(1, Math.min(parseInt(page) || 1, totalPages));
+        const offset = (currentPage - 1) * limit;
+
+        // Sorting
+        let orderBy = ' ORDER BY date DESC, id DESC';
+        if (sort === 'oldest') {
+            orderBy = ' ORDER BY date ASC, id ASC';
+        }
+
+        // Main Query
+        const dataParams = [...params, limit, offset];
+        const result = await db.query(
+            `SELECT * FROM loans ${whereClause} ${orderBy} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+            dataParams
+        );
+
         res.render('loans/index', {
             loans: result.rows,
-            username: req.session.username
+            overallLoans, // Use this for summary cards
+            username: req.session.username,
+            filters: { 
+                search: search || '', 
+                source: source || 'all', 
+                sort: sort || 'newest' 
+            },
+            pagination: { currentPage, totalPages, totalRecords }
         });
     } catch (err) {
         console.error(err);

@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gastos Fijos y Deudas - GastosMonini</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="container" style="display: flex; min-height: 100vh;">
+        <%- include('../partials/sidebar', { activePage: 'fixed_costs' }) %>
+
+            <main class="main-content">
+                <header class="top-nav animate-slide-up">
+                    <div class="welcome-text">
+                        <h1>Gastos Fijos y Deudas</h1>
+                        <p>Gestiona tus obligaciones recurrentes y deudas con flexibilidad.</p>
+                    </div>
+                    <div class="header-actions">
+                        <button onclick="openAddModal()" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Nuevo Registro
+                        </button>
+                    </div>
+                </header>
+ 
+                <!-- Stats Summary -->
+                <div class="stats-grid animate-slide-up" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; animation-delay: 0.05s;">
+                    <div class="premium-card stats-mini" style="border-left: 4px solid var(--success); display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem;">
+                        <div class="stats-icon-mini" style="width: 32px; height: 32px; background: #f0fdf4; color: var(--success); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                             <i class="fas fa-check-double"></i>
+                        </div>
+                        <div>
+                            <div class="stats-label-mini" style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Pagado</div>
+                            <div class="stats-value-mini" style="font-size: 1.1rem; font-weight: 800; color: var(--text-main);">S/ <%= stats.totalPaid.toFixed(2) %></div>
+                        </div>
+                    </div>
+
+                    <div class="premium-card stats-mini" style="border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem;">
+                        <div class="stats-icon-mini" style="width: 32px; height: 32px; background: #eff6ff; color: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                             <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <div class="stats-label-mini" style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Total Pendiente</div>
+                            <div class="stats-value-mini" style="font-size: 1.1rem; font-weight: 800; color: var(--primary);">S/ <%= stats.totalPending.toFixed(2) %></div>
+                        </div>
+                    </div>
+
+                    <div class="premium-card stats-mini" style="border-left: 4px solid <%= stats.pendingCount > 0 ? 'var(--warning)' : 'var(--success)' %>; display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem;">
+                        <div class="stats-icon-mini" style="width: 32px; height: 32px; background: <%= stats.pendingCount > 0 ? '#fffbeb' : '#f0fdf4' %>; color: <%= stats.pendingCount > 0 ? 'var(--warning)' : 'var(--success)' %>; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                             <i class="fas <%= stats.pendingCount > 0 ? 'fa-hourglass-half' : 'fa-check-circle' %>"></i>
+                        </div>
+                        <div>
+                            <div class="stats-label-mini" style="font-size: 0.6rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Estado General</div>
+                            <div class="stats-value-mini" style="font-size: 1rem; font-weight: 800; color: var(--text-main);"><%= stats.pendingCount > 0 ? stats.pendingCount + ' Pendientes' : 'Al día' %></div>
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    @media (max-width: 850px) {
+                        .stats-grid { grid-template-columns: 1fr !important; gap: 0.5rem !important; }
+                        .stats-mini { padding: 0.75rem !important; }
+                    }
+                </style>
+
+                <!-- Filtering System -->
+                <div class="premium-card animate-slide-up"
+                    style="margin-bottom: 2rem; padding: 1.5rem; animation-delay: 0.1s;">
+                    <form action="/fixed-costs" method="GET"
+                        style="display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap;">
+                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Buscar
+                                por Nombre</label>
+                            <div style="position: relative;">
+                                <i class="fas fa-search"
+                                    style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                <input type="text" name="search" placeholder="Ej: Alquiler, Banco..."
+                                    value="<%= filters.search || '' %>"
+                                    style="padding-left: 2.75rem; border-radius: 0.75rem;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Desde</label>
+                            <input type="date" name="start_date" value="<%= filters.start_date || '' %>"
+                                style="border-radius: 0.75rem;">
+                        </div>
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Hasta</label>
+                            <input type="date" name="end_date" value="<%= filters.end_date || '' %>"
+                                style="border-radius: 0.75rem;">
+                        </div>
+                        <div style="display: flex; gap: 0.75rem;">
+                            <button type="submit" class="btn btn-primary"
+                                style="padding: 0.75rem 1.5rem; border-radius: 0.75rem;">
+                                <i class="fas fa-filter"></i> Filtrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Dashboard/Grid -->
+                <div class="stats-grid animate-slide-up"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.5rem;">
+                    <% if (fixedCosts && fixedCosts.length> 0) { %>
+                        <% fixedCosts.forEach(item=> { %>
+                            <% const total=parseFloat(item.total_amount); const paid=parseFloat(item.paid_amount || 0);
+                                const remaining=total - paid; const percent=(paid / total) * 100; %>
+                                <div class="premium-card"
+                                    style="border-left: 5px solid <%= item.status === 'paid' ? 'var(--success)' : (item.is_installment ? 'var(--warning)' : 'var(--primary)') %>; position: relative; display: flex; flex-direction: column;">
+
+                                    <div
+                                        style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                                        <div>
+                                            <h3
+                                                style="font-weight: 800; font-size: 1.25rem; color: var(--text-main); margin-bottom: 0.25rem;">
+                                                <%= item.name %>
+                                            </h3>
+                                            <span
+                                                style="font-size: 0.65rem; font-weight: 800; background: var(--bg-alt); color: var(--text-muted); padding: 0.25rem 0.6rem; border-radius: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                                <%= item.is_installment ? 'Deuda a Cuotas' : 'Gasto Fijo' %>
+                                            </span>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div
+                                                style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+                                                Monto Pendiente</div>
+                                            <div
+                                                style="font-size: 1.5rem; font-weight: 900; color: <%= remaining > 0 ? 'var(--primary)' : 'var(--success)' %>;">
+                                                S/ <%= remaining.toFixed(2) %>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        style="background: var(--bg-alt); padding: 1rem; border-radius: 1rem; margin-bottom: 1.5rem;">
+                                        <div
+                                            style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; font-size: 0.8rem; font-weight: 700;">
+                                            <span style="color: var(--text-muted);">
+                                                <% if (item.is_installment) { %>
+                                                    Cuotas: <%= item.paid_installments %> / <%= item.total_installments
+                                                            %> cubiertas
+                                                            <% } else { %>
+                                                                Progreso de Pago
+                                                                <% } %>
+                                            </span>
+                                            <span style="color: var(--text-main);">
+                                                <%= percent.toFixed(1) %>%
+                                            </span>
+                                        </div>
+                                        <div
+                                            style="height: 10px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-bottom: 0.75rem;">
+                                            <div
+                                                style="width: <%= percent %>%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-light)); transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
+                                            </div>
+                                        </div>
+                                        <div
+                                            style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">
+                                            <span>Pagado: S/ <%= paid.toFixed(2) %></span>
+                                            <span>Total: S/ <%= total.toFixed(2) %></span>
+                                        </div>
+                                    </div>
+
+                                    <p
+                                        style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; margin-bottom: auto; min-height: 3rem;">
+                                        <%= item.description || 'Sin descripción.' %>
+                                    </p>
+
+                                    <div
+                                        style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--border);">
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <button onclick="openEditModal(<%= JSON.stringify(item) %>)" class="btn"
+                                                title="Editar"
+                                                style="background: var(--bg-alt); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; border-radius: 10px; color: var(--text-main);">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <form action="/fixed-costs/delete/<%= item.id %>" method="POST"
+                                                onsubmit="return confirm('¿Eliminar definitivamente?')">
+                                                <button type="submit" class="btn" title="Eliminar"
+                                                    style="background: var(--bg-alt); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; border-radius: 10px; color: var(--danger);">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+
+                                        <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                            <% if (item.status !=='paid' ) { %>
+                                                <button
+                                                    onclick="openPayModal(<%= item.id %>, '<%= item.name %>', <%= remaining %>, <%= item.monthly_amount %>, <%= paid %>, <%= item.paid_installments %>)"
+                                                    class="btn btn-primary"
+                                                    style="padding: 0.6rem 1.25rem; border-radius: 10px; font-weight: 700;">
+                                                    <i class="fas fa-money-bill-wave"></i> Abonar
+                                                </button>
+                                                <% } else { %>
+                                                    <span
+                                                        style="color: var(--success); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; background: #f0fdf4; padding: 0.5rem 1rem; border-radius: 10px; border: 1px solid #bbf7d0;">
+                                                        <i class="fas fa-check-circle"></i> Liquidado
+                                                    </span>
+                                                    <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                                <% }) %>
+                                    <% } else { %>
+                                        <div class="premium-card"
+                                            style="grid-column: 1 / -1; text-align: center; padding: 5rem 2rem;">
+                                            <div style="font-size: 4rem; color: #e2e8f0; margin-bottom: 1.5rem;"><i
+                                                    class="fas fa-file-invoice-dollar"></i></div>
+                                            <h2
+                                                style="font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">
+                                                Sin registros activos</h2>
+                                            <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto;">
+                                                Agrega tus gastos fijos o deudas para empezar a trackear tus pagos hoy
+                                                mismo.</p>
+                                        </div>
+                                        <% } %>
+                </div>
+
+                <!-- Pagination -->
+                <% if (pagination && pagination.totalPages> 1) { %>
+                    <div
+                        style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 3rem;">
+                        <% if (pagination.currentPage> 1) { %>
+                            <a href="/fixed-costs?page=<%= pagination.currentPage - 1 %>&search=<%= filters.search %>"
+                                class="btn"
+                                style="background: var(--bg-alt); padding: 0.6rem 1.2rem; font-weight: 700; border-radius: 10px;"><i
+                                    class="fas fa-chevron-left"></i></a>
+                            <% } %>
+                                <span style="font-weight: 800; color: var(--text-muted); font-size: 0.85rem;">Página <%=
+                                        pagination.currentPage %> de <%= pagination.totalPages %></span>
+                                <% if (pagination.currentPage < pagination.totalPages) { %>
+                                    <a href="/fixed-costs?page=<%= pagination.currentPage + 1 %>&search=<%= filters.search %>"
+                                        class="btn"
+                                        style="background: var(--bg-alt); padding: 0.6rem 1.2rem; font-weight: 700; border-radius: 10px;"><i
+                                            class="fas fa-chevron-right"></i></a>
+                                    <% } %>
+                    </div>
+                    <% } %>
+            </main>
+    </div>
+
+    <!-- ADD/EDIT MODAL -->
+    <div class="modal" id="fixedCostModal">
+        <div class="modal-content animate-slide-up" style="max-width: 550px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="font-weight: 800;" id="modalTitle">Nuevo Registro</h2>
+                <button type="button" class="btn" style="background: none; padding: 0; color: var(--text-muted);"
+                    onclick="closeModal('fixedCostModal')">
+                    <i class="fas fa-times" style="font-size: 1.5rem;"></i>
+                </button>
+            </div>
+
+            <form action="/fixed-costs/add" method="POST" id="fixedCostForm">
+                <input type="hidden" name="id" id="edit_id">
+                <div class="form-group">
+                    <label>Concepto</label>
+                    <input type="text" name="name" id="form_name" required placeholder="Ej: Alquiler, Préstamo BBVA...">
+                </div>
+
+                <div class="form-group">
+                    <label>Monto Total</label>
+                    <input type="number" id="form_total_amount" name="total_amount" step="0.01" required
+                        placeholder="0.00" oninput="suggestMonthly()">
+                </div>
+
+                <div class="form-group">
+                    <label>Tipo de Pago</label>
+                    <div style="display: flex; gap: 1.5rem;">
+                        <label
+                            style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+                            <input type="radio" name="is_installment" id="radio_direct" value="false" checked
+                                onclick="toggleInstallments(false)"> Gasto Directo
+                        </label>
+                        <label
+                            style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+                            <input type="radio" name="is_installment" id="radio_installment" value="true"
+                                onclick="toggleInstallments(true)"> Pago a Cuotas
+                        </label>
+                    </div>
+                </div>
+
+                <div id="installmentFields"
+                    style="display: none; grid-template-columns: 1fr 1fr; gap: 1.25rem; background: #f8fafc; padding: 1.25rem; border-radius: 1rem; border: 1px solid #f1f5f9; margin-bottom: 1.5rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Nº de Cuotas</label>
+                        <input type="number" id="form_total_installments" name="total_installments" placeholder="Ej: 12"
+                            oninput="suggestMonthly()">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Monto Cuota (Sugerida)</label>
+                        <input type="number" id="form_monthly_amount" name="monthly_amount" step="0.01"
+                            placeholder="Monto cuota">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fecha de Inicio / Registro</label>
+                    <input type="date" name="start_date" id="form_start_date" required
+                        value="<%= new Date().toISOString().split('T')[0] %>">
+                </div>
+
+                <div class="form-group">
+                    <label>Descripción / Notas</label>
+                    <textarea name="description" id="form_description" rows="3" placeholder="Opcional..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary"
+                    style="width: 100%; padding: 1.15rem; border-radius: 1rem; font-weight: 800; font-size: 1.1rem; margin-top: 1rem; box-shadow: 0 4px 6px -1px var(--primary-light);">
+                    Guardar Cambios
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- PAYMENT MODAL -->
+    <div class="modal" id="payModal">
+        <div class="modal-content animate-slide-up" style="max-width: 450px; padding: 2.5rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div
+                    style="width: 70px; height: 70px; background: #f0fdf4; color: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 1.5rem;">
+                    <i class="fas fa-hand-holding-dollar"></i>
+                </div>
+                <h2 style="font-weight: 800; margin-bottom: 0.5rem;" id="payModalHeader">Abonar Pago</h2>
+                <div style="display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <span id="payItemName" style="color: var(--text-main); font-weight: 700; font-size: 0.9rem;"></span>
+                    <span id="payCurrentInstallment"
+                        style="background: var(--bg-alt); color: var(--text-muted); padding: 0.2rem 0.5rem; border-radius: 0.4rem; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;"></span>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 2rem;">
+                <button type="button" class="btn" onclick="setPayAmount('monthly')"
+                    style="background: var(--bg-alt); padding: 1rem; border-radius: 1rem; text-align: center; border: 2px solid transparent; transition: all 0.2s;"
+                    id="btnPayMonthly">
+                    <div style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;"
+                        id="labelMonthly">Pagar Cuota</div>
+                    <div style="font-weight: 800; color: var(--text-main);" id="textMonthly">S/ 0.00</div>
+                </button>
+                <button type="button" class="btn" onclick="setPayAmount('total')"
+                    style="background: var(--bg-alt); padding: 1rem; border-radius: 1rem; text-align: center; border: 2px solid transparent; transition: all 0.2s;"
+                    id="btnPayTotal">
+                    <div
+                        style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem;">
+                        Liquidar Todo</div>
+                    <div style="font-weight: 800; color: var(--text-main);" id="textTotal">S/ 0.00</div>
+                </button>
+            </div>
+
+            <form action="" method="POST" id="payForm" onsubmit="return validatePayment()">
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label
+                        style="display: block; font-weight: 800; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 1rem; text-align: center;">Monto
+                        a Abonar Personalizado</label>
+                    <div style="position: relative;">
+                        <span
+                            style="position: absolute; left: 1.5rem; top: 50%; transform: translateY(-50%); font-weight: 800; color: var(--text-main); font-size: 1.5rem;">S/</span>
+                        <input type="number" name="amount" id="pay_amount" step="0.01" required
+                            style="text-align: center; font-size: 2rem; padding: 1.25rem; height: auto; font-weight: 900; border-radius: 1.25rem; border: 2px solid var(--primary-light); background: #f8fafc;"
+                            oninput="clearSelection()">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 1rem;">
+                    <button type="button" class="btn"
+                        style="flex: 1; background: var(--bg-alt); font-weight: 700; border-radius: 1rem; padding: 1rem;"
+                        onclick="closeModal('payModal')">Cerrar</button>
+                    <button type="submit" class="btn btn-primary"
+                        style="flex: 1; font-weight: 800; border-radius: 1rem; padding: 1rem; box-shadow: 0 10px 15px -3px var(--primary-light);">Confirmar
+                        Pago</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const fixedCostModal = document.getElementById('fixedCostModal');
+        const payModal = document.getElementById('payModal');
+        const installmentFields = document.getElementById('installmentFields');
+        let currentRemaining = 0;
+        let currentMonthly = 0;
+
+        function openAddModal() {
+            document.getElementById('modalTitle').innerText = 'Nuevo Gasto Fijo / Deuda';
+            document.getElementById('fixedCostForm').action = '/fixed-costs/add';
+            document.getElementById('edit_id').value = '';
+            document.getElementById('fixedCostForm').reset();
+            document.getElementById('form_start_date').value = new Date().toISOString().split('T')[0];
+            toggleInstallments(false);
+            fixedCostModal.style.display = 'flex';
+        }
+
+        function openEditModal(item) {
+            document.getElementById('modalTitle').innerText = 'Editar Registro';
+            document.getElementById('fixedCostForm').action = '/fixed-costs/edit/' + item.id;
+            document.getElementById('edit_id').value = item.id;
+            document.getElementById('form_name').value = item.name;
+            document.getElementById('form_total_amount').value = item.total_amount;
+            document.getElementById('form_description').value = item.description;
+            document.getElementById('form_start_date').value = new Date(item.start_date).toISOString().split('T')[0];
+
+            if (item.is_installment) {
+                document.getElementById('radio_installment').checked = true;
+                document.getElementById('form_total_installments').value = item.total_installments;
+                document.getElementById('form_monthly_amount').value = item.monthly_amount;
+                toggleInstallments(true);
+            } else {
+                document.getElementById('radio_direct').checked = true;
+                toggleInstallments(false);
+            }
+            fixedCostModal.style.display = 'flex';
+        }
+
+        function openPayModal(id, name, remaining, monthly, paid, currentInst) {
+            document.getElementById('payForm').action = '/fixed-costs/pay/' + id;
+            document.getElementById('payItemName').innerText = name;
+
+            currentRemaining = remaining;
+            currentMonthly = monthly;
+
+            const amountToCompleteCurrent = (Math.ceil(paid / monthly) * monthly) - paid;
+
+            const suggestAmount = (amountToCompleteCurrent > 0 && amountToCompleteCurrent < monthly)
+                ? amountToCompleteCurrent
+                : (remaining < monthly ? remaining : monthly);
+
+            if (currentInst !== undefined && currentInst !== null && !isNaN(currentInst)) {
+                const nextInstNumber = currentInst + 1;
+                document.getElementById('payCurrentInstallment').innerText = 'EN CUOTA #' + nextInstNumber;
+                document.getElementById('payCurrentInstallment').style.display = 'inline-block';
+
+                if (amountToCompleteCurrent > 0 && amountToCompleteCurrent < monthly) {
+                    document.getElementById('labelMonthly').innerText = 'Completar Cuota ' + nextInstNumber;
+                } else {
+                    document.getElementById('labelMonthly').innerText = 'Pagar Cuota ' + nextInstNumber;
+                }
+            } else {
+                document.getElementById('payCurrentInstallment').style.display = 'none';
+                document.getElementById('labelMonthly').innerText = 'Pagar Gasto';
+            }
+
+            document.getElementById('textMonthly').innerText = 'S/ ' + suggestAmount.toFixed(2);
+            document.getElementById('textTotal').innerText = 'S/ ' + remaining.toFixed(2);
+
+            // Set default to suggested amount
+            document.getElementById('pay_amount').value = suggestAmount.toFixed(2);
+            clearSelection();
+            document.getElementById('btnPayMonthly').style.borderColor = 'var(--primary)';
+            document.getElementById('btnPayMonthly').style.background = 'white';
+
+            payModal.style.display = 'flex';
+        }
+
+        function setPayAmount(type) {
+            const input = document.getElementById('pay_amount');
+            const btnMonthly = document.getElementById('btnPayMonthly');
+            const btnTotal = document.getElementById('btnPayTotal');
+
+            clearSelection();
+
+            if (type === 'monthly') {
+                input.value = document.getElementById('textMonthly').innerText.replace('S/ ', '');
+                btnMonthly.style.borderColor = 'var(--primary)';
+                btnMonthly.style.background = 'white';
+            } else if (type === 'total') {
+                input.value = currentRemaining.toFixed(2);
+                btnTotal.style.borderColor = 'var(--success)';
+                btnTotal.style.background = 'white';
+            }
+        }
+
+        function clearSelection() {
+            document.getElementById('btnPayMonthly').style.borderColor = 'transparent';
+            document.getElementById('btnPayMonthly').style.background = 'var(--bg-alt)';
+            document.getElementById('btnPayTotal').style.borderColor = 'transparent';
+            document.getElementById('btnPayTotal').style.background = 'var(--bg-alt)';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function toggleInstallments(show) {
+            installmentFields.style.display = show ? 'grid' : 'none';
+            const monthlyInput = document.getElementById('form_monthly_amount');
+            if (show) {
+                monthlyInput.required = true;
+                suggestMonthly();
+            } else {
+                monthlyInput.required = false;
+                document.getElementById('form_monthly_amount').value = document.getElementById('form_total_amount').value;
+            }
+        }
+
+        function suggestMonthly() {
+            const total = parseFloat(document.getElementById('form_total_amount').value);
+            const totalInst = parseInt(document.getElementById('form_total_installments').value);
+            const isInstallment = document.querySelector('input[name="is_installment"]:checked').value === 'true';
+
+            if (isInstallment) {
+                if (!isNaN(total) && !isNaN(totalInst) && totalInst > 0) {
+                    document.getElementById('form_monthly_amount').value = (total / totalInst).toFixed(2);
+                }
+            } else {
+                if (!isNaN(total)) {
+                    document.getElementById('form_monthly_amount').value = total.toFixed(2);
+                }
+            }
+        }
+
+        function validatePayment() {
+            const amount = parseFloat(document.getElementById('pay_amount').value);
+            if (amount > currentRemaining + 0.01) {
+                alert('¡Atención! No puedes abonar más del total de la deuda restante (S/ ' + currentRemaining.toFixed(2) + ').');
+                return false;
+            }
+            return true;
+        }
+
+        window.onclick = function (event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('error') === 'overpaid') {
+            alert('Error: El pago excede el monto total de la deuda.');
+        }
+    </script>
+</body>
+
+</html>

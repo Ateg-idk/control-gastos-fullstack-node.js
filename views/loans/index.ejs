@@ -77,17 +77,16 @@
                     </div>
                 </header>
                 <div class="stats-grid animate-slide-up" style="display: grid; gap: 1.5rem; margin-bottom: 2rem;">
-                    <% let externalLoans=loans.filter(l=> !l.from_budget);
+                    <% let externalLoans=overallLoans.filter(l=> !l.from_budget);
                         let extTotal = externalLoans.reduce((sum, l)=> sum + parseFloat(l.amount), 0);
                         let extRecovered = externalLoans.reduce((sum, l) => sum + parseFloat(l.paid_amount || 0), 0);
                         let extPending = extTotal - extRecovered;
 
-                        let budgetLoans = loans.filter(l => l.from_budget);
+                        let budgetLoans = overallLoans.filter(l => l.from_budget);
                         let budTotal = budgetLoans.reduce((sum, l)=> sum + parseFloat(l.amount), 0);
                         let budRecovered = budgetLoans.reduce((sum, l) => sum + parseFloat(l.paid_amount || 0), 0);
                         let budPending = budTotal - budRecovered;
                         %>
-                        <!-- External Loans block -->
                         <div class="premium-card"
                             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem; align-items: center; border-left: 5px solid var(--primary);">
                             <div style="grid-column: 1 / -1;">
@@ -158,6 +157,51 @@
                             </div>
                         </div>
                 </div>
+
+                <!-- NEW FILTERING SYSTEM -->
+                <div class="premium-card animate-slide-up"
+                    style="margin-bottom: 2rem; padding: 1.5rem; animation-delay: 0.1s;">
+                    <form action="/loans" method="GET"
+                        style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                        <input type="hidden" name="page" value="1">
+                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Buscar
+                                Beneficiario</label>
+                            <div style="position: relative;">
+                                <i class="fas fa-search"
+                                    style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                <input type="text" name="search" placeholder="Nombre..." value="<%= filters.search %>"
+                                    style="padding-left: 2.75rem; border-radius: 0.75rem;">
+                            </div>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Fuente</label>
+                            <select name="source" style="border-radius: 0.75rem;">
+                                <option value="all" <%=filters.source==='all' ? 'selected' : '' %>>Todos</option>
+                                <option value="budget" <%=filters.source==='budget' ? 'selected' : '' %>>Presupuesto
+                                </option>
+                                <option value="external" <%=filters.source==='external' ? 'selected' : '' %>>Externo
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                            <label
+                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Orden</label>
+                            <select name="sort" style="border-radius: 0.75rem;">
+                                <option value="newest" <%=filters.sort==='newest' ? 'selected' : '' %>>Más recientes
+                                </option>
+                                <option value="oldest" <%=filters.sort==='oldest' ? 'selected' : '' %>>Más antiguos
+                                </option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary"
+                            style="padding: 0.75rem 1.5rem; border-radius: 0.75rem;">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </form>
+                </div>
                 <div class="premium-card animate-slide-up" style="padding: 0; overflow: hidden; animation-delay: 0.2s;">
                     <div class="table-container">
                         <table class="data-table mobile-cards">
@@ -165,6 +209,7 @@
                                 <tr>
                                     <th style="padding-left: 1.5rem;">Beneficiario</th>
                                     <th>Monto</th>
+                                    <th>Fuente</th>
                                     <th>Fecha</th>
                                     <th>Estado</th>
                                     <th>Detalles</th>
@@ -197,6 +242,21 @@
                                                         Abonado: S/ <%= parseFloat(loan.paid_amount || 0).toFixed(2) %>
                                                     </div>
                                                     <% } %>
+                                            </td>
+                                            <td data-label="Fuente">
+                                                <% if (loan.from_budget) { %>
+                                                    <span
+                                                        style="font-size: 0.7rem; font-weight: 800; background: #e0f2fe; color: #0369a1; padding: 0.3rem 0.6rem; border-radius: 0.5rem; text-transform: uppercase;">
+                                                        <i class="fas fa-wallet" style="margin-right: 0.25rem;"></i>
+                                                        Presupuesto
+                                                    </span>
+                                                    <% } else { %>
+                                                        <span
+                                                            style="font-size: 0.7rem; font-weight: 800; background: #f3e8ff; color: #7e22ce; padding: 0.3rem 0.6rem; border-radius: 0.5rem; text-transform: uppercase;">
+                                                            <i class="fas fa-external-link-alt"
+                                                                style="margin-right: 0.25rem;"></i> Externo
+                                                        </span>
+                                                        <% } %>
                                             </td>
                                             <td data-label="Fecha"
                                                 style="font-size: 0.85rem; color: var(--text-muted); font-weight: 600;">
@@ -248,7 +308,7 @@
                                         <% }) %>
                                             <% } else { %>
                                                 <tr>
-                                                    <td colspan="6" style="text-align: center; padding: 6rem 2rem;">
+                                                    <td colspan="7" style="text-align: center; padding: 6rem 2rem;">
                                                         <div
                                                             style="font-size: 3.5rem; margin-bottom: 1.5rem; color: #e2e8f0;">
                                                             <i class="fas fa-handshake-angle"></i>
@@ -264,6 +324,32 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- PAGINATION CONTROLS -->
+                <% if (pagination && pagination.totalPages> 1) { %>
+                    <div
+                        style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem;">
+                        <% if (pagination.currentPage> 1) { %>
+                            <a href="/loans?page=<%= pagination.currentPage - 1 %>&search=<%= filters.search %>&source=<%= filters.source %>&sort=<%= filters.sort %>"
+                                class="btn"
+                                style="background: var(--bg-alt); padding: 0.6rem 1.2rem; font-weight: 700; border-radius: 10px; color: var(--text-main); text-decoration: none;">
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </a>
+                            <% } %>
+
+                                <span style="font-weight: 800; color: var(--text-muted); font-size: 0.85rem;">
+                                    Página <%= pagination.currentPage %> de <%= pagination.totalPages %>
+                                </span>
+
+                                <% if (pagination.currentPage < pagination.totalPages) { %>
+                                    <a href="/loans?page=<%= pagination.currentPage + 1 %>&search=<%= filters.search %>&source=<%= filters.source %>&sort=<%= filters.sort %>"
+                                        class="btn"
+                                        style="background: var(--bg-alt); padding: 0.6rem 1.2rem; font-weight: 700; border-radius: 10px; color: var(--text-main); text-decoration: none;">
+                                        Siguiente <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                    <% } %>
+                    </div>
+                    <% } %>
             </main>
     </div>
     <div id="loanModal" class="modal">
@@ -471,28 +557,41 @@
 
         function toggleModal(id) {
             const modal = document.getElementById(id);
-            if (modal.style.display === 'flex') {
+            if (!modal) return;
+
+            // Force reset display if it's currently invisible but not none
+            const isVisible = window.getComputedStyle(modal).display !== 'none';
+
+            if (isVisible) {
                 modal.style.display = 'none';
                 document.body.classList.remove('modal-open');
             } else {
+                // Ensure other modals are closed
+                document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+
                 modal.style.display = 'flex';
                 document.body.classList.add('modal-open');
             }
         }
 
         function openEditLoanModal(id, person, amount, dateStr, desc, fromBudget) {
+            const modal = document.getElementById('editLoanModal');
             document.getElementById('editLoanForm').action = '/loans/edit/' + id;
             document.getElementById('editLoanPerson').value = person;
             document.getElementById('editLoanAmount').value = amount;
 
             const parseDate = (d) => {
-                return new Date(d).toISOString().split('T')[0];
+                try {
+                    return new Date(d).toISOString().split('T')[0];
+                } catch (e) {
+                    return new Date().toISOString().split('T')[0];
+                }
             };
             document.getElementById('editLoanDate').value = parseDate(dateStr);
             document.getElementById('editLoanDesc').value = desc;
             document.getElementById('editLoanSource').value = fromBudget ? 'true' : 'false';
 
-            document.getElementById('editLoanModal').style.display = 'flex';
+            modal.style.display = 'flex';
             document.body.classList.add('modal-open');
         }
 
@@ -502,6 +601,7 @@
         }
 
         function openPayLoanModal(id, personBase64, remaining) {
+            const modal = document.getElementById('payLoanModal');
             const decodedPerson = atob(personBase64);
             document.getElementById('payLoanForm').action = '/loans/pay/' + id;
             document.getElementById('payLoanPerson').textContent = 'Cobro a ' + decodedPerson;
@@ -509,7 +609,7 @@
             document.getElementById('payLoanAmount').value = Number(remaining).toFixed(2);
             document.getElementById('payLoanAmount').max = Number(remaining).toFixed(2);
 
-            document.getElementById('payLoanModal').style.display = 'flex';
+            modal.style.display = 'flex';
             document.body.classList.add('modal-open');
         }
 
@@ -519,7 +619,7 @@
         }
 
         window.onclick = function (event) {
-            if (event.target.className.includes('modal') || event.target.id === 'payLoanModal' || event.target.id === 'editLoanModal') {
+            if (event.target.classList.contains('modal')) {
                 event.target.style.display = "none";
                 document.body.classList.remove('modal-open');
             }
