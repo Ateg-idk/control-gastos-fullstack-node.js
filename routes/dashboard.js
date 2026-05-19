@@ -34,16 +34,37 @@ router.get('/', async (req, res) => {
         const regularExpenses = expenses.filter(exp => exp.category !== 'Préstamo');
         const totalRegularSpent = regularExpenses.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
 
-        const totalLentThisPeriod = loans
-            .filter(l => l.from_budget && new Date(l.date) >= new Date(activePeriod.start_date) && new Date(l.date) <= new Date(activePeriod.end_date))
-            .reduce((sum, l) => sum + parseFloat(l.amount), 0);
+        const loanOutflows = expenses.filter(exp => exp.category === 'Préstamo' && parseFloat(exp.amount) > 0);
+        const totalLentThisPeriod = loanOutflows.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
 
-        const totalRecoveredThisPeriod = loans
-            .filter(l => l.from_budget && new Date(l.date) >= new Date(activePeriod.start_date) && new Date(l.date) <= new Date(activePeriod.end_date))
-            .reduce((sum, l) => sum + parseFloat(l.paid_amount || 0), 0);
+        const loanRecoveries = expenses.filter(exp => exp.category === 'Préstamo' && parseFloat(exp.amount) < 0);
+        const totalRecoveredThisPeriod = loanRecoveries.reduce((sum, exp) => sum + Math.abs(parseFloat(exp.amount)), 0);
 
-        const totalSpent = totalRegularSpent + totalLentThisPeriod - totalRecoveredThisPeriod;
-        const balance = budget - totalSpent;
+        let totalRecoveredOldLoans = 0;
+        if (activePeriod) {
+            const toLimaDateString = (dateInput) => {
+                return new Date(dateInput).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+            };
+            const activePeriodStartStr = toLimaDateString(activePeriod.start_date);
+
+            loanRecoveries.forEach(recovery => {
+                const personName = recovery.name.replace('Abono Préstamo: ', '').trim();
+                const matchedLoan = loans.find(l => l.person_name.toLowerCase() === personName.toLowerCase());
+                if (matchedLoan) {
+                    const loanDateStr = toLimaDateString(matchedLoan.date);
+                    if (loanDateStr < activePeriodStartStr) {
+                        totalRecoveredOldLoans += Math.abs(parseFloat(recovery.amount));
+                    }
+                }
+            });
+        }
+
+        const totalRecoveredCurrentPeriodLoans = totalRecoveredThisPeriod - totalRecoveredOldLoans;
+
+        const adjustedBudget = budget + totalRecoveredOldLoans;
+
+        const totalSpent = totalRegularSpent + totalLentThisPeriod - totalRecoveredCurrentPeriodLoans;
+        const balance = adjustedBudget - totalSpent;
 
         const categoryData = regularExpenses.reduce((acc, exp) => {
             const cat = exp.category || 'Otros';
@@ -65,7 +86,7 @@ router.get('/', async (req, res) => {
             .reduce((sum, l) => sum + parseFloat(l.paid_amount || 0), 0);
 
         res.render('dashboard', {
-            budget,
+            budget: adjustedBudget,
             totalSpent,
             balance,
             categoryData,
@@ -85,7 +106,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// ADMIN ROUTES
 router.get('/users', async (req, res) => {
     if (req.session.role !== 'ADMIN') return res.status(403).send('Acceso denegado');
     try {

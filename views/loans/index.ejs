@@ -281,7 +281,7 @@
                                                     <% if (loan.status==='pending' ) { %>
                                                         <button type="button" class="btn-action success"
                                                             title="Abonar Pago"
-                                                            onclick="openPayLoanModal('<%= loan.id %>', '<%= Buffer.from(loan.person_name).toString(`base64`) %>', <%= parseFloat(loan.amount) - parseFloat(loan.paid_amount || 0) %>)">
+                                                            onclick="openPayLoanModal('<%= loan.id %>', '<%= Buffer.from(loan.person_name).toString(`base64`) %>', <%= parseFloat(loan.amount) - parseFloat(loan.paid_amount || 0) %>, '<%= new Date(loan.date).toISOString().split('T')[0] %>', <%= loan.from_budget %>)">
                                                             <i class="fas fa-hand-holding-dollar"></i>
                                                         </button>
                                                         <% } else { %>
@@ -519,6 +519,11 @@
                     </div>
                 </div>
 
+                <div id="payLoanPreviousPeriodNotice" style="display: none; background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--info); border-radius: 0.75rem; padding: 1rem; margin-top: 1rem; font-size: 0.8rem; color: #0284c7; line-height: 1.5; font-weight: 600;">
+                    <i class="fas fa-info-circle" style="margin-right: 0.5rem; font-size: 1rem; vertical-align: middle;"></i>
+                    <span>Este préstamo es de un periodo anterior. Al confirmar este cobro, el monto se sumará automáticamente como saldo disponible en tu presupuesto actual para que puedas volver a utilizarlo.</span>
+                </div>
+
                 <div style="margin-top: 1.5rem;">
                     <button type="submit" class="btn btn-primary success"
                         style="width: 100%; justify-content: center; padding: 1.25rem; border-radius: 1rem; font-size: 1rem; font-weight: 700; background: var(--success) !important;">
@@ -600,7 +605,9 @@
             document.body.classList.remove('modal-open');
         }
 
-        function openPayLoanModal(id, personBase64, remaining) {
+        const activePeriodStartDate = '<%= locals.activePeriodStartDate ? new Date(locals.activePeriodStartDate).toISOString().split("T")[0] : "" %>';
+
+        function openPayLoanModal(id, personBase64, remaining, loanDateStr, fromBudget) {
             const modal = document.getElementById('payLoanModal');
             const decodedPerson = atob(personBase64);
             document.getElementById('payLoanForm').action = '/loans/pay/' + id;
@@ -608,6 +615,15 @@
             document.getElementById('payLoanRemaining').textContent = Number(remaining).toFixed(2);
             document.getElementById('payLoanAmount').value = Number(remaining).toFixed(2);
             document.getElementById('payLoanAmount').max = Number(remaining).toFixed(2);
+
+            const notice = document.getElementById('payLoanPreviousPeriodNotice');
+            if (notice) {
+                if (fromBudget && activePeriodStartDate && loanDateStr && loanDateStr < activePeriodStartDate) {
+                    notice.style.display = 'block';
+                } else {
+                    notice.style.display = 'none';
+                }
+            }
 
             modal.style.display = 'flex';
             document.body.classList.add('modal-open');

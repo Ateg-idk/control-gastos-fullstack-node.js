@@ -84,6 +84,29 @@
                                             <% } %>
                         </p>
                     </div>
+
+                    <div class="premium-card"
+                        style="border-top: 5px solid var(--primary); cursor: pointer; transition: transform 0.2s;"
+                        onclick="window.location.href='/expenses?filter=all'"
+                        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                        <div class="stat-header"
+                            style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                            <div class="stat-icon"
+                                style="background: #e0f2fe; color: var(--primary); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <span class="stat-label"
+                                style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
+                                Gastos Totales
+                            </span>
+                        </div>
+                        <h2 class="stat-value" style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/
+                            <%= typeof filteredTotal !=='undefined' ? filteredTotal.toFixed(2) : '0.00' %>
+                        </h2>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
+                            Suma total según los filtros aplicados
+                        </p>
+                    </div>
                 </div>
                 <div class="premium-card animate-slide-up"
                     style="margin-bottom: 2rem; padding: 1.5rem; animation-delay: 0.1s;">
@@ -133,8 +156,6 @@
                         </div>
                     </form>
                 </div>
-
-                <!-- Main Data Table -->
                 <div class="premium-card animate-slide-up" style="padding: 0; overflow: hidden; animation-delay: 0.2s;">
                     <div class="table-container">
                         <table class="data-table mobile-cards">
@@ -201,29 +222,36 @@
                                                         <td style="text-align: center; padding-right: 1.5rem;"
                                                             data-label="Acciones">
                                                             <div
-                                                                style="display: flex; gap: 0.5rem; justify-content: center;">
-                                                                <button type="button"
-                                                                    style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
-                                                                    onmouseover="this.style.color='var(--primary)'"
-                                                                    onmouseout="this.style.color='#94a3b8'"
-                                                                    onclick="openEditExpenseModal('<%= exp.id %>', '<%= exp.name %>', '<%= exp.amount %>', '<%= exp.date %>', '<%= exp.description %>', '<%= exp.category %>')">
-                                                                    <i class="fas fa-edit"
-                                                                        style="font-size: 1.1rem;"></i>
-                                                                </button>
-                                                                <form id="deleteExpForm-<%= exp.id %>"
-                                                                    action="/expenses/delete/<%= exp.id %>"
-                                                                    method="POST">
+                                                                style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                                                                <% if (exp.category === 'Préstamo') { %>
+                                                                    <span title="Este movimiento está vinculado a un préstamo. Para modificarlo o eliminarlo, hazlo desde la sección de Préstamos." 
+                                                                          style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; background: var(--bg-alt); padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: 1px solid var(--border);">
+                                                                        <i class="fas fa-lock" style="font-size: 0.8rem; color: #94a3b8;"></i> Vinculado
+                                                                    </span>
+                                                                <% } else { %>
                                                                     <button type="button"
                                                                         style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
-                                                                        onmouseover="this.style.color='var(--danger)'"
+                                                                        onmouseover="this.style.color='var(--primary)'"
                                                                         onmouseout="this.style.color='#94a3b8'"
-                                                                        data-id="<%= exp.id %>"
-                                                                        data-name="<%= exp.name %>"
-                                                                        onclick="confirmDeleteExpense(this)">
-                                                                        <i class="fas fa-trash-alt"
+                                                                        onclick="openEditExpenseModal('<%= exp.id %>', '<%= exp.name %>', '<%= exp.amount %>', '<%= exp.date %>', '<%= exp.description %>', '<%= exp.category %>')">
+                                                                        <i class="fas fa-edit"
                                                                             style="font-size: 1.1rem;"></i>
                                                                     </button>
-                                                                </form>
+                                                                    <form id="deleteExpForm-<%= exp.id %>"
+                                                                        action="/expenses/delete/<%= exp.id %>"
+                                                                        method="POST">
+                                                                        <button type="button"
+                                                                            style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
+                                                                            onmouseover="this.style.color='var(--danger)'"
+                                                                            onmouseout="this.style.color='#94a3b8'"
+                                                                            data-id="<%= exp.id %>"
+                                                                            data-name="<%= exp.name %>"
+                                                                            onclick="confirmDeleteExpense(this)">
+                                                                            <i class="fas fa-trash-alt"
+                                                                                style="font-size: 1.1rem;"></i>
+                                                                        </button>
+                                                                    </form>
+                                                                <% } %>
                                                             </div>
                                                         </td>
                                                     </tr>

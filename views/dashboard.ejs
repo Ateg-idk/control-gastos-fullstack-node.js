@@ -14,7 +14,7 @@
 <body>
     <div class="container" style="display: flex; min-height: 100vh;">
         <%- include('partials/sidebar', { activePage: 'dashboard' }) %>
-
+            git commit -m "refactor: proteger movimientos de prestamos y corregir calculos del dashboard"
             <main class="main-content">
                 <header class="top-nav animate-slide-up">
                     <div class="welcome-text">
@@ -32,8 +32,6 @@
                         </a>
                     </div>
                 </header>
-
-                <!-- Financial Health Grid -->
                 <div class="stats-grid animate-slide-up">
                     <div class="premium-card" style="border-top: 5px solid var(--primary);">
                         <div class="stat-header">
@@ -80,25 +78,21 @@
                         </p>
                     </div>
                 </div>
-                <!-- Global Assets & Loans & Transactions side-by-side -->
                 <div class="analysis-row animate-slide-up">
 
-                    <!-- Left Column: Loan Management separated by origin -->
                     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                         <% let externalLoans=loans.filter(l=> !l.from_budget);
                             let extTotal = externalLoans.reduce((sum, l)=> sum + parseFloat(l.amount), 0);
-                            let extRecovered = externalLoans.filter(l => l.status === 'paid').reduce((sum, l) => sum +
-                            parseFloat(l.amount), 0);
+                            let extRecovered = externalLoans.reduce((sum, l) => sum + parseFloat(l.paid_amount || 0),
+                            0);
                             let extPending = extTotal - extRecovered;
 
                             let budgetLoans = loans.filter(l => l.from_budget);
                             let budTotal = budgetLoans.reduce((sum, l)=> sum + parseFloat(l.amount), 0);
-                            let budRecovered = budgetLoans.filter(l => l.status === 'paid').reduce((sum, l) => sum +
-                            parseFloat(l.amount), 0);
+                            let budRecovered = budgetLoans.reduce((sum, l) => sum + parseFloat(l.paid_amount || 0), 0);
                             let budPending = budTotal - budRecovered;
                             %>
 
-                            <!-- External Loans Block -->
                             <div class="premium-card"
                                 style="background: #0f172a; color: white; border: none; overflow: hidden; position: relative; width: 100%;">
                                 <div
@@ -137,8 +131,6 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Budget Loans Block -->
                             <div class="premium-card"
                                 style="background: #0f172a; color: white; border: none; overflow: hidden; position: relative; width: 100%;">
                                 <div
@@ -190,7 +182,6 @@
                             </div>
                     </div>
 
-                    <!-- Right Column: Recent Transactions -->
                     <div class="premium-card" style="height: fit-content; display: flex; flex-direction: column;">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">

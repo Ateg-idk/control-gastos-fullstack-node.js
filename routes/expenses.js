@@ -15,9 +15,21 @@ router.get('/', async (req, res) => {
         const currentDay = PET.getDay();
         const diff = PET.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
         const currentStartOfWeek = new Date(PET.setDate(diff)).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+        const activePeriodRes = await db.query(
+            'SELECT * FROM public.budget_periods WHERE user_id = $1 AND is_active = TRUE ORDER BY created_at DESC LIMIT 1',
+            [userId]
+        );
+        const activePeriod = activePeriodRes.rows[0];
 
         let baseQuery = ' FROM expenses WHERE user_id = $1';
         let params = [userId];
+
+        if (activePeriod) {
+            baseQuery += ' AND date >= $' + (params.length + 1) + ' AND date <= $' + (params.length + 2);
+            params.push(activePeriod.start_date, activePeriod.end_date);
+        } else {
+            baseQuery += ' AND 1 = 0';
+        }
 
         let statsTargetDay = todayDate;
         let statsTargetWeekStart = currentStartOfWeek;
@@ -55,15 +67,25 @@ router.get('/', async (req, res) => {
             baseQuery += ' AND name ILIKE $' + (params.length + 1);
             params.push(`%${search}%`);
         }
+
         const countRes = await db.query('SELECT COUNT(*)' + baseQuery, params);
         const totalRecords = parseInt(countRes.rows[0].count);
+
+        const totalSumRes = await db.query(
+            'SELECT COALESCE(SUM(amount), 0) as total_sum' + baseQuery + " AND category != 'Préstamo' AND amount > 0",
+            params
+        );
+        const filteredTotal = parseFloat(totalSumRes.rows[0].total_sum);
+
         const limit = 20;
         const totalPages = Math.ceil(totalRecords / limit) || 1;
         const currentPage = Math.max(1, Math.min(parseInt(page) || 1, totalPages));
         const offset = (currentPage - 1) * limit;
+
         const dataQuery = 'SELECT *' + baseQuery + ' ORDER BY date DESC, id DESC LIMIT $' + (params.length + 1) + ' OFFSET $' + (params.length + 2);
         const paramsWithPagination = [...params, limit, offset];
         const expensesRes = await db.query(dataQuery, paramsWithPagination);
+
         let statsQuery = `
             SELECT 
                 COALESCE(SUM(CASE WHEN date = $2 THEN amount ELSE 0 END), 0) as daily_total,
@@ -74,12 +96,20 @@ router.get('/', async (req, res) => {
         let statsParams = [userId, statsTargetDay, statsTargetWeekStart];
         if (statsTargetWeekEnd) statsParams.push(statsTargetWeekEnd);
 
+        if (activePeriod) {
+            statsQuery += ` AND date >= $${statsParams.length + 1} AND date <= $${statsParams.length + 2}`;
+            statsParams.push(activePeriod.start_date, activePeriod.end_date);
+        } else {
+            statsQuery += ' AND 1 = 0';
+        }
+
         const statsRes = await db.query(statsQuery, statsParams);
 
         res.render('expenses/index', {
             expenses: expensesRes.rows,
             dailyTotal: parseFloat(statsRes.rows[0].daily_total),
             weeklyTotal: parseFloat(statsRes.rows[0].weekly_total),
+            filteredTotal,
             username: req.session.username,
             filters: { search, day: isValidDate(dayFilter) ? dayFilter : '', week: isValidWeek(weekFilter) ? weekFilter : '', filter: filter || (!search && !dayFilter && !weekFilter ? 'week' : '') },
             pagination: { currentPage, totalPages, totalRecords },
@@ -116,7 +146,15 @@ router.post('/add', async (req, res) => {
 router.post('/delete/:id', async (req, res) => {
     const userId = req.session.userId;
     try {
-        await db.query('DELETE FROM expenses WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        const expRes = await db.query('SELECT * FROM expenses WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        if (expRes.rows.length > 0) {
+            const expense = expRes.rows[0];
+            if (expense.category === 'Préstamo') {
+                req.session.error = 'No se pueden eliminar movimientos de préstamos desde aquí. Debes hacerlo desde la sección de Préstamos.';
+                return res.redirect('/expenses');
+            }
+            await db.query('DELETE FROM expenses WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        }
         res.redirect('/expenses');
     } catch (err) {
         console.error(err);
@@ -128,12 +166,20 @@ router.post('/edit/:id', async (req, res) => {
     const { name, amount, date, description, category } = req.body;
     const userId = req.session.userId;
     try {
-        const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
-        await db.query(`
-            UPDATE expenses 
-            SET name = $1, amount = $2, date = $3, description = $4, category = $5
-            WHERE id = $6 AND user_id = $7
-        `, [name, amount, date || todayDate, description || '', category || 'Otros', req.params.id, userId]);
+        const expRes = await db.query('SELECT * FROM expenses WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        if (expRes.rows.length > 0) {
+            const expense = expRes.rows[0];
+            if (expense.category === 'Préstamo') {
+                req.session.error = 'No se pueden editar movimientos de préstamos desde aquí. Debes hacerlo desde la sección de Préstamos.';
+                return res.redirect('/expenses');
+            }
+            const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
+            await db.query(`
+                UPDATE expenses 
+                SET name = $1, amount = $2, date = $3, description = $4, category = $5
+                WHERE id = $6 AND user_id = $7
+            `, [name, amount, date || todayDate, description || '', category || 'Otros', req.params.id, userId]);
+        }
         res.redirect('/expenses');
     } catch (err) {
         console.error(err);
