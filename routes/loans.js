@@ -7,20 +7,15 @@ router.get('/', async (req, res) => {
     const { search, source, sort, page } = req.query;
 
     try {
-        // Fetch active period to know the current period start date
         const activePeriodRes = await db.query(
             'SELECT * FROM public.budget_periods WHERE user_id = $1 AND is_active = TRUE ORDER BY created_at DESC LIMIT 1',
             [userId]
         );
         const activePeriod = activePeriodRes.rows[0];
         const activePeriodStartDate = activePeriod ? activePeriod.start_date : null;
-
-        // Overall Stats (Always based on total data for the user)
-        const statsRes = await db.query('SELECT * FROM loans WHERE user_id = $1', [userId]);
+        const statsRes = await db.query('SELECT * FROM loans WHERE user_id = $1 AND is_archived = FALSE', [userId]);
         const overallLoans = statsRes.rows;
-
-        // Filtering Logic
-        let whereClause = ' WHERE user_id = $1';
+        let whereClause = ' WHERE user_id = $1 AND is_archived = FALSE';
         let params = [userId];
 
         if (search) {
@@ -34,21 +29,16 @@ router.get('/', async (req, res) => {
             whereClause += ' AND from_budget = false';
         }
 
-        // Count for pagination
         const countRes = await db.query('SELECT COUNT(*) FROM loans' + whereClause, params);
         const totalRecords = parseInt(countRes.rows[0].count);
         const limit = 10;
         const totalPages = Math.ceil(totalRecords / limit) || 1;
         const currentPage = Math.max(1, Math.min(parseInt(page) || 1, totalPages));
         const offset = (currentPage - 1) * limit;
-
-        // Sorting
         let orderBy = ' ORDER BY date DESC, id DESC';
         if (sort === 'oldest') {
             orderBy = ' ORDER BY date ASC, id ASC';
         }
-
-        // Main Query
         const dataParams = [...params, limit, offset];
         const result = await db.query(
             `SELECT * FROM loans ${whereClause} ${orderBy} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -57,7 +47,7 @@ router.get('/', async (req, res) => {
 
         res.render('loans/index', {
             loans: result.rows,
-            overallLoans, // Use this for summary cards
+            overallLoans,
             activePeriodStartDate,
             username: req.session.username,
             filters: {
@@ -177,16 +167,21 @@ router.post('/delete/:id', async (req, res) => {
             const loan = loanRes.rows[0];
 
             await db.query('BEGIN');
-            await db.query('DELETE FROM loans WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
 
-            if (loan.from_budget) {
-                // Delete all corresponding original loan expenses, payments, or cancelations
-                await db.query(`
-                    DELETE FROM expenses 
-                    WHERE user_id = $1 
-                      AND category = 'Préstamo' 
-                      AND (name = $2 OR name = $3 OR name = $4)
-                `, [userId, `Préstamo a ${loan.person_name}`, `Abono Préstamo: ${loan.person_name}`, `Cancelación Préstamo: ${loan.person_name}`]);
+            const paidAmount = parseFloat(loan.paid_amount || 0);
+            if (loan.status === 'paid' || paidAmount > 0) {
+                await db.query('UPDATE loans SET is_archived = TRUE WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+            } else {
+                await db.query('DELETE FROM loans WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+
+                if (loan.from_budget) {
+                    await db.query(`
+                        DELETE FROM expenses 
+                        WHERE user_id = $1 
+                          AND category = 'Préstamo' 
+                          AND (name = $2 OR name = $3 OR name = $4)
+                    `, [userId, `Préstamo a ${loan.person_name}`, `Abono Préstamo: ${loan.person_name}`, `Cancelación Préstamo: ${loan.person_name}`]);
+                }
             }
 
             await db.query('COMMIT');
@@ -219,21 +214,18 @@ router.post('/edit/:id', async (req, res) => {
             `, [person_name, amount, date || todayDate, description || '', isFromBudget, req.params.id, userId]);
 
             if (oldLoan.from_budget && isFromBudget) {
-                // Sincronizar el nombre e importe del préstamo principal
                 await db.query(`
                     UPDATE expenses 
                     SET amount = $1, name = $2 
                     WHERE user_id = $3 AND category = 'Préstamo' AND name = $4
                 `, [amount, `Préstamo a ${person_name}`, userId, `Préstamo a ${oldLoan.person_name}`]);
 
-                // Sincronizar los abonos existentes con el nuevo nombre
                 await db.query(`
                     UPDATE expenses 
                     SET name = $1 
                     WHERE user_id = $2 AND category = 'Préstamo' AND name = $3
                 `, [`Abono Préstamo: ${person_name}`, userId, `Abono Préstamo: ${oldLoan.person_name}`]);
             } else if (oldLoan.from_budget && !isFromBudget) {
-                // Si cambió de presupuesto a externo, eliminar todos los registros asociados en movimientos
                 await db.query(`
                     DELETE FROM expenses 
                     WHERE user_id = $1 
@@ -241,7 +233,6 @@ router.post('/edit/:id', async (req, res) => {
                       AND (name = $2 OR name = $3)
                 `, [userId, `Préstamo a ${oldLoan.person_name}`, `Abono Préstamo: ${oldLoan.person_name}`]);
             } else if (!oldLoan.from_budget && isFromBudget) {
-                // Si cambió de externo a presupuesto, insertar el préstamo en movimientos
                 await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
                     [userId, `Préstamo a ${person_name}`, amount, date || todayDate, `Capital restado del presupuesto: ${description || ''}`, 'Préstamo']);
             }

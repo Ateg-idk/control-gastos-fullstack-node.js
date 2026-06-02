@@ -180,7 +180,7 @@
                                             <td style="text-align: center;" data-label="Estado">
                                                 <span class="status-badge paid">Cerrado</span>
                                             </td>
-                                            <td style="text-align: center; padding-right: 1.5rem;"
+                                            <td style="text-align: center; padding-right: 1.5rem; display: flex; gap: 0.75rem; justify-content: center; align-items: center;"
                                                 data-label="Acciones">
                                                 <button type="button"
                                                     style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
@@ -189,6 +189,17 @@
                                                     onclick="openEditBudgetModal('<%= p.id %>', '<%= p.name %>', '<%= p.amount %>', '<%= p.start_date %>', '<%= p.end_date %>')">
                                                     <i class="fas fa-edit" style="font-size: 1.1rem;"></i>
                                                 </button>
+                                                <form id="deleteBudgetForm-<%= p.id %>"
+                                                    action="/budget/delete/<%= p.id %>" method="POST"
+                                                    style="display: inline; margin: 0;">
+                                                    <button type="button"
+                                                        style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
+                                                        onmouseover="this.style.color='var(--danger)'"
+                                                        onmouseout="this.style.color='#94a3b8'" data-id="<%= p.id %>"
+                                                        data-name="<%= p.name %>" onclick="confirmDeleteBudget(this)">
+                                                        <i class="fas fa-trash-can" style="font-size: 1.1rem;"></i>
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                         <% }) %>
@@ -290,6 +301,18 @@
             if (event.target == modal) {
                 closeEditBudgetModal();
             }
+        }
+
+        function confirmDeleteBudget(btn) {
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            customConfirm({
+                title: 'Eliminar Periodo',
+                message: `¿Estás seguro de eliminar el periodo "${name}" de tu historial? Esto borrará permanentemente su presupuesto y todos los movimientos asociados en ese rango de fechas (excepto préstamos).`,
+                onConfirm: () => {
+                    document.getElementById(`deleteBudgetForm-${id}`).submit();
+                }
+            });
         }
     </script>
 </body>

@@ -63,8 +63,15 @@ router.get('/', async (req, res) => {
 
         const adjustedBudget = budget + totalRecoveredOldLoans;
 
-        const totalSpent = totalRegularSpent + totalLentThisPeriod - totalRecoveredCurrentPeriodLoans;
-        const balance = adjustedBudget - totalSpent;
+        let totalSpent = totalRegularSpent + totalLentThisPeriod - totalRecoveredCurrentPeriodLoans;
+        if (Math.abs(totalSpent) < 0.005) {
+            totalSpent = 0;
+        }
+
+        let balance = adjustedBudget - totalSpent;
+        if (Math.abs(balance) < 0.005) {
+            balance = 0;
+        }
 
         const categoryData = regularExpenses.reduce((acc, exp) => {
             const cat = exp.category || 'Otros';
@@ -95,7 +102,7 @@ router.get('/', async (req, res) => {
                 totalPaid: totalPaidLoans
             },
             expenses,
-            loans,
+            loans: loans.filter(l => !l.is_archived),
             periodName,
             dateRange,
             username: req.session.username

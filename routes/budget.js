@@ -63,4 +63,32 @@ router.post('/edit/:id', async (req, res) => {
     }
 });
 
+router.post('/delete/:id', async (req, res) => {
+    const userId = req.session.userId;
+    try {
+        await db.query('BEGIN');
+
+        const periodRes = await db.query('SELECT * FROM public.budget_periods WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        if (periodRes.rows.length > 0) {
+            const period = periodRes.rows[0];
+
+            await db.query(`
+                DELETE FROM public.expenses 
+                WHERE user_id = $1 
+                  AND date >= $2 
+                  AND date <= $3 
+                  AND (category IS NULL OR category != 'Préstamo')
+            `, [userId, period.start_date, period.end_date]);
+            await db.query('DELETE FROM public.budget_periods WHERE id = $1 AND user_id = $2', [req.params.id, userId]);
+        }
+
+        await db.query('COMMIT');
+        res.redirect('/budget?updated=true');
+    } catch (err) {
+        await db.query('ROLLBACK');
+        console.error(err);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
