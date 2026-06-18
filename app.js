@@ -2,6 +2,7 @@ const express = require('express');
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const path = require('path');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
@@ -17,10 +18,27 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'secret',
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: false }
+    cookie: { secure: false, maxAge: 2 * 60 * 60 * 1000 } // 2 hours
 }));
+app.use((req, res, next) => {
+    const token = req.cookies.token;
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'jwt_secret_fallback_key');
+            if (!req.session.isLoggedIn) {
+                req.session.isLoggedIn = true;
+                req.session.userId = decoded.userId;
+                req.session.username = decoded.username;
+                req.session.role = decoded.role;
+            }
+        } catch (err) {
+            console.error('Invalid JWT token:', err.message);
+            res.clearCookie('token');
+        }
+    }
+    next();
+});
 
-// Global messages middleware
 app.use((req, res, next) => {
     res.locals.error = req.session.error || null;
     res.locals.success = req.session.success || null;

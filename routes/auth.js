@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../lib/db');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 router.get('/login', (req, res) => {
     if (req.session.isLoggedIn) return res.redirect('/dashboard');
@@ -25,13 +26,24 @@ router.post('/login', async (req, res) => {
                     today.setHours(0, 0, 0, 0);
                     const expiry = new Date(user.expires_at);
                     expiry.setHours(0, 0, 0, 0);
-                    // Add 1 day buffer to inclusive expiration date (it expires AFTER that day ends)
                     expiry.setDate(expiry.getDate() + 1);
                     if (today >= expiry) {
                         req.session.error = 'Tu suscripción ha vencido. Por favor, contacta a tu administrador para renovar tu acceso.';
                         return res.redirect('/login');
                     }
                 }
+
+                const token = jwt.sign(
+                    { userId: user.id, username: user.username, role: user.role },
+                    process.env.JWT_SECRET || 'jwt_secret_fallback_key',
+                    { expiresIn: '2h' }
+                );
+
+                res.cookie('token', token, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    maxAge: 2 * 60 * 60 * 1000
+                });
 
                 req.session.isLoggedIn = true;
                 req.session.userId = user.id;
@@ -57,8 +69,6 @@ router.get('/register', (req, res) => {
 
 router.post('/register', async (req, res) => {
     const { username, password, email, phone } = req.body;
-
-    // Validación backend de email y teléfono
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^[0-9]{9}$/;
 
@@ -97,6 +107,7 @@ router.post('/register', async (req, res) => {
 });
 
 router.get('/logout', (req, res) => {
+    res.clearCookie('token');
     req.session.destroy();
     res.redirect('/login');
 });

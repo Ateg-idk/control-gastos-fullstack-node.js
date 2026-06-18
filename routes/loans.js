@@ -103,11 +103,11 @@ router.post('/pay/:id', async (req, res) => {
 
             const currentPaid = parseFloat(loan.paid_amount || 0);
             const totalAmount = parseFloat(loan.amount);
-            let newPaid = currentPaid + paymentAmount;
+            let newPaid = Math.round((currentPaid + paymentAmount) * 100) / 100;
 
             if (newPaid > totalAmount) newPaid = totalAmount;
 
-            const actualPayment = newPaid - currentPaid;
+            const actualPayment = Math.round((newPaid - currentPaid) * 100) / 100;
             const newStatus = newPaid >= totalAmount ? 'paid' : 'pending';
             const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 

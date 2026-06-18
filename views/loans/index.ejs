@@ -281,27 +281,41 @@
                                                     <% if (loan.status==='pending' ) { %>
                                                         <button type="button" class="btn-action success"
                                                             title="Abonar Pago"
-                                                            onclick="openPayLoanModal('<%= loan.id %>', '<%= Buffer.from(loan.person_name).toString(`base64`) %>', <%= parseFloat(loan.amount) - parseFloat(loan.paid_amount || 0) %>, '<%= new Date(loan.date).toISOString().split('T')[0] %>', <%= loan.from_budget %>)">
+                                                            onclick="openPayLoanModal('<%= loan.id %>', '<%= Buffer.from(loan.person_name).toString(`base64`) %>', <%= (parseFloat(loan.amount) - parseFloat(loan.paid_amount || 0)).toFixed(2) %>, '<%= new Date(loan.date).toISOString().split('T')[0] %>', <%= loan.from_budget %>)">
                                                             <i class="fas fa-hand-holding-dollar"></i>
                                                         </button>
-                                                        <% } else { %>
-                                                            <form action="/loans/undo/<%= loan.id %>" method="POST"
-                                                                onsubmit="showLoading()">
-                                                                <button type="submit" class="btn-action undo"
-                                                                    title="Reabrir">
+                                                        <% if (parseFloat(loan.paid_amount || 0)> 0) { %>
+                                                            <form id="undoForm-<%= loan.id %>"
+                                                                action="/loans/undo/<%= loan.id %>" method="POST">
+                                                                <button type="button" class="btn-action undo"
+                                                                    title="Restablecer Abonos"
+                                                                    onclick="confirmUndo('<%= loan.id %>', '<%= loan.person_name %>')">
                                                                     <i class="fas fa-rotate-left"></i>
                                                                 </button>
                                                             </form>
                                                             <% } %>
-                                                                <form id="deleteLoanForm-<%= loan.id %>"
-                                                                    action="/loans/delete/<%= loan.id %>" method="POST">
-                                                                    <button type="button" class="btn-action delete"
-                                                                        data-id="<%= loan.id %>"
-                                                                        data-person="<%= loan.person_name %>"
-                                                                        onclick="confirmDeleteLoan(this)">
-                                                                        <i class="fas fa-trash-can"></i>
-                                                                    </button>
-                                                                </form>
+                                                                <% } else { %>
+                                                                    <form id="undoForm-<%= loan.id %>"
+                                                                        action="/loans/undo/<%= loan.id %>"
+                                                                        method="POST">
+                                                                        <button type="button" class="btn-action undo"
+                                                                            title="Reabrir / Restablecer"
+                                                                            onclick="confirmUndo('<%= loan.id %>', '<%= loan.person_name %>')">
+                                                                            <i class="fas fa-rotate-left"></i>
+                                                                        </button>
+                                                                    </form>
+                                                                    <% } %>
+                                                                        <form id="deleteLoanForm-<%= loan.id %>"
+                                                                            action="/loans/delete/<%= loan.id %>"
+                                                                            method="POST">
+                                                                            <button type="button"
+                                                                                class="btn-action delete"
+                                                                                data-id="<%= loan.id %>"
+                                                                                data-person="<%= loan.person_name %>"
+                                                                                onclick="confirmDeleteLoan(this)">
+                                                                                <i class="fas fa-trash-can"></i>
+                                                                            </button>
+                                                                        </form>
                                                 </div>
                                             </td>
                                         </tr>
@@ -519,9 +533,13 @@
                     </div>
                 </div>
 
-                <div id="payLoanPreviousPeriodNotice" style="display: none; background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--info); border-radius: 0.75rem; padding: 1rem; margin-top: 1rem; font-size: 0.8rem; color: #0284c7; line-height: 1.5; font-weight: 600;">
-                    <i class="fas fa-info-circle" style="margin-right: 0.5rem; font-size: 1rem; vertical-align: middle;"></i>
-                    <span>Este préstamo es de un periodo anterior. Al confirmar este cobro, el monto se sumará automáticamente como saldo disponible en tu presupuesto actual para que puedas volver a utilizarlo.</span>
+                <div id="payLoanPreviousPeriodNotice"
+                    style="display: none; background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--info); border-radius: 0.75rem; padding: 1rem; margin-top: 1rem; font-size: 0.8rem; color: #0284c7; line-height: 1.5; font-weight: 600;">
+                    <i class="fas fa-info-circle"
+                        style="margin-right: 0.5rem; font-size: 1rem; vertical-align: middle;"></i>
+                    <span>Este préstamo es de un periodo anterior. Al confirmar este cobro, el monto se sumará
+                        automáticamente como saldo disponible en tu presupuesto actual para que puedas volver a
+                        utilizarlo.</span>
                 </div>
 
                 <div style="margin-top: 1.5rem;">
@@ -548,11 +566,20 @@
             });
         }
 
+        function confirmUndo(id, name) {
+            customConfirm({
+                title: 'Restablecer Abonos',
+                message: `¿Estás seguro de restablecer todos los abonos del préstamo de ${name}? Se borrarán los registros de abono y el monto abonado volverá a cero.`,
+                onConfirm: () => {
+                    showLoading();
+                    document.getElementById(`undoForm-${id}`).submit();
+                }
+            });
+        }
+
         function showLoading() {
             document.getElementById('loadingOverlay').style.display = 'flex';
         }
-
-        // Show toast if redirected with success
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('updated')) {
             const toast = document.getElementById('toast');
