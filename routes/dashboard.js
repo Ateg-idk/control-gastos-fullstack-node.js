@@ -48,8 +48,14 @@ router.get('/', async (req, res) => {
             const activePeriodStartStr = toLimaDateString(activePeriod.start_date);
 
             loanRecoveries.forEach(recovery => {
-                const personName = recovery.name.replace('Abono Préstamo: ', '').trim();
-                const matchedLoan = loans.find(l => l.person_name.toLowerCase() === personName.toLowerCase());
+                let matchedLoan = null;
+                if (recovery.loan_id) {
+                    matchedLoan = loans.find(l => l.id === recovery.loan_id);
+                }
+                if (!matchedLoan) {
+                    const personName = recovery.name.replace('Abono Préstamo: ', '').trim();
+                    matchedLoan = loans.find(l => l.person_name.toLowerCase() === personName.toLowerCase());
+                }
                 if (matchedLoan) {
                     const loanDateStr = toLimaDateString(matchedLoan.date);
                     if (loanDateStr < activePeriodStartStr) {

@@ -72,12 +72,17 @@ router.post('/add', async (req, res) => {
         const todayDate = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
         await db.query('BEGIN');
 
-        await db.query('INSERT INTO loans (user_id, person_name, amount, date, description, from_budget) VALUES ($1, $2, $3, $4, $5, $6)',
-            [userId, person_name, amount, date || todayDate, description || '', isFromBudget]);
+        const insertRes = await db.query(
+            'INSERT INTO loans (user_id, person_name, amount, date, description, from_budget) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+            [userId, person_name, amount, date || todayDate, description || '', isFromBudget]
+        );
+        const newLoanId = insertRes.rows[0].id;
 
         if (isFromBudget) {
-            await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
-                [userId, `Préstamo a ${person_name}`, amount, date || todayDate, `Capital restado del presupuesto: ${description}`, 'Préstamo']);
+            await db.query(
+                'INSERT INTO expenses (user_id, name, amount, date, description, category, loan_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [userId, `Préstamo a ${person_name}`, amount, date || todayDate, `Capital restado del presupuesto: ${description || ''}`, 'Préstamo', newLoanId]
+            );
         }
 
         await db.query('COMMIT');
@@ -116,8 +121,10 @@ router.post('/pay/:id', async (req, res) => {
                 [newPaid, newStatus, newStatus === 'paid' ? todayDate : null, req.params.id, userId]);
 
             if (loan.from_budget && actualPayment > 0) {
-                await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
-                    [userId, `Abono Préstamo: ${loan.person_name}`, -actualPayment, todayDate, `Abono de S/ ${actualPayment.toFixed(2)} por préstamo del ${new Date(loan.date).toLocaleDateString('es-ES')}`, 'Préstamo']);
+                await db.query(
+                    'INSERT INTO expenses (user_id, name, amount, date, description, category, loan_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                    [userId, `Abono Préstamo: ${loan.person_name}`, -actualPayment, todayDate, `Abono de S/ ${actualPayment.toFixed(2)} por préstamo del ${new Date(loan.date).toLocaleDateString('es-ES')}`, 'Préstamo', req.params.id]
+                );
             }
             await db.query('COMMIT');
         }
@@ -146,8 +153,8 @@ router.post('/undo/:id', async (req, res) => {
                     DELETE FROM expenses 
                     WHERE user_id = $1 
                       AND category = 'Préstamo' 
-                      AND name = $2
-                `, [userId, `Abono Préstamo: ${loan.person_name}`]);
+                      AND (loan_id = $2 OR (loan_id IS NULL AND name = $3))
+                `, [userId, req.params.id, `Abono Préstamo: ${loan.person_name}`]);
             }
             await db.query('COMMIT');
         }
@@ -179,8 +186,8 @@ router.post('/delete/:id', async (req, res) => {
                         DELETE FROM expenses 
                         WHERE user_id = $1 
                           AND category = 'Préstamo' 
-                          AND (name = $2 OR name = $3 OR name = $4)
-                    `, [userId, `Préstamo a ${loan.person_name}`, `Abono Préstamo: ${loan.person_name}`, `Cancelación Préstamo: ${loan.person_name}`]);
+                          AND (loan_id = $2 OR (loan_id IS NULL AND (name = $3 OR name = $4 OR name = $5)))
+                    `, [userId, req.params.id, `Préstamo a ${loan.person_name}`, `Abono Préstamo: ${loan.person_name}`, `Cancelación Préstamo: ${loan.person_name}`]);
                 }
             }
 
@@ -216,25 +223,33 @@ router.post('/edit/:id', async (req, res) => {
             if (oldLoan.from_budget && isFromBudget) {
                 await db.query(`
                     UPDATE expenses 
-                    SET amount = $1, name = $2 
-                    WHERE user_id = $3 AND category = 'Préstamo' AND name = $4
-                `, [amount, `Préstamo a ${person_name}`, userId, `Préstamo a ${oldLoan.person_name}`]);
+                    SET amount = $1, name = $2, date = $3
+                    WHERE user_id = $4 
+                      AND category = 'Préstamo' 
+                      AND amount > 0 
+                      AND (loan_id = $5 OR (loan_id IS NULL AND name = $6 AND amount = $7))
+                `, [amount, `Préstamo a ${person_name}`, date || todayDate, userId, req.params.id, `Préstamo a ${oldLoan.person_name}`, oldLoan.amount]);
 
                 await db.query(`
                     UPDATE expenses 
                     SET name = $1 
-                    WHERE user_id = $2 AND category = 'Préstamo' AND name = $3
-                `, [`Abono Préstamo: ${person_name}`, userId, `Abono Préstamo: ${oldLoan.person_name}`]);
+                    WHERE user_id = $2 
+                      AND category = 'Préstamo' 
+                      AND amount < 0 
+                      AND (loan_id = $3 OR (loan_id IS NULL AND name = $4))
+                `, [`Abono Préstamo: ${person_name}`, userId, req.params.id, `Abono Préstamo: ${oldLoan.person_name}`]);
             } else if (oldLoan.from_budget && !isFromBudget) {
                 await db.query(`
                     DELETE FROM expenses 
                     WHERE user_id = $1 
                       AND category = 'Préstamo' 
-                      AND (name = $2 OR name = $3)
-                `, [userId, `Préstamo a ${oldLoan.person_name}`, `Abono Préstamo: ${oldLoan.person_name}`]);
+                      AND (loan_id = $2 OR (loan_id IS NULL AND (name = $3 OR name = $4)))
+                `, [userId, req.params.id, `Préstamo a ${oldLoan.person_name}`, `Abono Préstamo: ${oldLoan.person_name}`]);
             } else if (!oldLoan.from_budget && isFromBudget) {
-                await db.query('INSERT INTO expenses (user_id, name, amount, date, description, category) VALUES ($1, $2, $3, $4, $5, $6)',
-                    [userId, `Préstamo a ${person_name}`, amount, date || todayDate, `Capital restado del presupuesto: ${description || ''}`, 'Préstamo']);
+                await db.query(
+                    'INSERT INTO expenses (user_id, name, amount, date, description, category, loan_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                    [userId, `Préstamo a ${person_name}`, amount, date || todayDate, `Capital restado del presupuesto: ${description || ''}`, 'Préstamo', req.params.id]
+                );
             }
         }
 
