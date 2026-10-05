@@ -15,298 +15,433 @@
         <%- include('../partials/sidebar', { activePage: 'expenses' }) %>
 
             <main class="main-content">
-                <header class="top-nav animate-slide-up">
+                <header class="top-nav animate-slide-up"
+                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                     <div class="welcome-text">
                         <h1>Historial de Movimientos</h1>
-                        <p>Visualiza y gestiona todos tus registros de gastos.</p>
+                        <p>Visualiza y gestiona todos tus registros de gastos organizados por presupuesto.</p>
                     </div>
-                    <div class="header-actions">
+                    <div class="header-actions"
+                        style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                        <!-- Budget Period Selector Dropdown -->
+                        <div
+                            style="display: flex; align-items: center; gap: 0.5rem; background: white; padding: 0.4rem 0.85rem; border-radius: 0.85rem; border: 1.5px solid var(--border); box-shadow: var(--shadow-sm);">
+                            <i class="fas fa-wallet" style="color: var(--primary); font-size: 1rem;"></i>
+                            <label for="periodSelect"
+                                style="font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin: 0; white-space: nowrap;">Presupuesto:</label>
+                            <select id="periodSelect" onchange="changeBudgetPeriod(this.value)"
+                                style="border: none; background: transparent; font-weight: 700; color: var(--text-main); font-size: 0.85rem; cursor: pointer; outline: none; padding-right: 0.5rem; max-width: 250px;">
+                                <% if (budgetPeriods && budgetPeriods.length> 0) { %>
+                                    <% budgetPeriods.forEach(p=> { %>
+                                        <option value="<%= p.id %>" <%=(selectedPeriodId==p.id) ? 'selected' : '' %>>
+                                            <%= p.is_active ? '🟢 (Activo) ' : '⚪ ' %>
+                                                <%= p.name %> [S/ <%= parseFloat(p.amount).toFixed(2) %>]
+                                        </option>
+                                        <% }) %>
+                                            <option value="all" <%=(selectedPeriodId==='all' ) ? 'selected' : '' %>>🌐
+                                                Todos los Presupuestos (Histórico Global)</option>
+                                            <% } else { %>
+                                                <option value="all">Sin presupuestos registrados</option>
+                                                <% } %>
+                            </select>
+                        </div>
+
                         <button onclick="openModal()" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Nuevo Gasto
                         </button>
                     </div>
                 </header>
-
-                <!-- Daily and Weekly Stats -->
-                <div class="stats-grid animate-slide-up"
-                    style="margin-bottom: 2rem; gap: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
-                    <div class="premium-card"
-                        style="border-top: 5px solid var(--danger); cursor: pointer; transition: transform 0.2s;"
-                        onclick="window.location.href='/expenses?filter=today'"
-                        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                        <div class="stat-header"
-                            style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                            <div class="stat-icon"
-                                style="background: #fee2e2; color: var(--danger); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                                <i class="fas fa-calendar-day"></i>
+                <% if (selectedPeriod) { const remaining=parseFloat(selectedPeriod.amount) - (typeof periodSpent
+                    !=='undefined' ? periodSpent : 0); const isSpentOver=remaining < 0; %>
+                    <div class="premium-card animate-slide-up"
+                        style="margin-bottom: 2rem; padding: 1.25rem 1.75rem; background: <%= selectedPeriod.is_active ? 'linear-gradient(135deg, rgba(67, 56, 202, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%)' : 'var(--bg-alt)' %>; border: 1.5px solid <%= selectedPeriod.is_active ? 'rgba(67, 56, 202, 0.25)' : 'var(--border)' %>; border-radius: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.25rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div
+                                style="width: 48px; height: 48px; border-radius: 14px; background: <%= selectedPeriod.is_active ? 'var(--primary-light)' : '#e2e8f0' %>; color: <%= selectedPeriod.is_active ? 'var(--primary)' : 'var(--text-muted)' %>; display: flex; align-items: center; justify-content: center; font-size: 1.35rem;">
+                                <i class="fas <%= selectedPeriod.is_active ? 'fa-chart-pie' : 'fa-box-archive' %>"></i>
                             </div>
-                            <span class="stat-label"
-                                style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
-                                <%= statsLabels ? statsLabels.day : 'Gastos de Hoy' %>
-                            </span>
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                                    <h2
+                                        style="font-weight: 800; font-size: 1.25rem; color: var(--text-main); margin: 0;">
+                                        <%= selectedPeriod.name %>
+                                    </h2>
+                                    <span class="status-badge <%= selectedPeriod.is_active ? 'pending' : 'paid' %>"
+                                        style="font-size: 0.65rem; padding: 0.25rem 0.65rem;">
+                                        <%= selectedPeriod.is_active ? 'Periodo Activo' : 'Cerrado' %>
+                                    </span>
+                                </div>
+                                <p
+                                    style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; margin-top: 0.25rem;">
+                                    <i class="fas fa-calendar-alt"
+                                        style="margin-right: 0.35rem; color: var(--primary);"></i>
+                                    <%= new Date(selectedPeriod.start_date).toLocaleDateString('es-ES', { day: '2-digit'
+                                        , month: 'short' , year: 'numeric' }) %> al <%= new
+                                            Date(selectedPeriod.end_date).toLocaleDateString('es-ES', { day: '2-digit' ,
+                                            month: 'short' , year: 'numeric' }) %>
+                                </p>
+                            </div>
                         </div>
-                        <h2 class="stat-value" style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/
-                            <%= typeof dailyTotal !=='undefined' ? dailyTotal.toFixed(2) : '0.00' %>
-                        </h2>
-                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
-                            Total registrado en el transcurso de hoy
-                        </p>
+                        <div style="display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;">
+                            <div style="text-align: right;">
+                                <span
+                                    style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Presupuesto</span>
+                                <div style="font-size: 1.25rem; font-weight: 900; color: var(--primary);">S/ <%=
+                                        parseFloat(selectedPeriod.amount).toFixed(2) %>
+                                </div>
+                            </div>
+                            <div style="height: 35px; width: 1px; background: var(--border);"></div>
+                            <div style="text-align: right;">
+                                <span
+                                    style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Gastado
+                                    en Periodo</span>
+                                <div
+                                    style="font-size: 1.25rem; font-weight: 900; color: <%= isSpentOver ? 'var(--danger)' : 'var(--text-main)' %>;">
+                                    S/ <%= (typeof periodSpent !=='undefined' ? periodSpent : 0).toFixed(2) %>
+                                </div>
+                            </div>
+                            <div style="height: 35px; width: 1px; background: var(--border);"></div>
+                            <div style="text-align: right;">
+                                <span
+                                    style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Disponible</span>
+                                <div
+                                    style="font-size: 1.25rem; font-weight: 900; color: <%= isSpentOver ? 'var(--danger)' : 'var(--success)' %>;">
+                                    S/ <%= remaining.toFixed(2) %>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <div class="premium-card"
-                        style="border-top: 5px solid var(--warning); cursor: pointer; transition: transform 0.2s;"
-                        onclick="window.location.href='/expenses?filter=week'"
-                        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                        <div class="stat-header"
-                            style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                            <div class="stat-icon"
-                                style="background: #fef3c7; color: var(--warning); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                                <i class="fas fa-calendar-week"></i>
+                    <% } else if (selectedPeriodId==='all' ) { %>
+                        <div class="premium-card animate-slide-up"
+                            style="margin-bottom: 2rem; padding: 1rem 1.5rem; background: var(--bg-alt); border: 1px solid var(--border); border-radius: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-globe-americas" style="color: var(--primary); font-size: 1.25rem;"></i>
+                                <span
+                                    style="font-weight: 700; color: var(--text-main); font-size: 0.875rem;">Visualizando
+                                    el Histórico Global de todos tus movimientos sin restricción de presupuesto.</span>
                             </div>
-                            <span class="stat-label"
-                                style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
-                                <%= statsLabels ? statsLabels.week : 'Gastos de la Semana' %>
-                            </span>
                         </div>
-                        <h2 class="stat-value" style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/
-                            <%= typeof weeklyTotal !=='undefined' ? weeklyTotal.toFixed(2) : '0.00' %>
-                        </h2>
-                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
-                            <% if (statsLabels && statsLabels.weekRange) { const formatDate=(dateStr)=> {
-                                const d = new Date(dateStr + 'T12:00:00');
-                                return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                                };
-                                %>
-                                Del <%= formatDate(statsLabels.weekRange.start) %> al <%=
-                                        formatDate(statsLabels.weekRange.end) %>
-                                        <% } else { %>
-                                            Acumulado de Lunes a Domingo
+                        <% } %>
+
+                            <!-- Daily and Weekly Stats -->
+                            <div class="stats-grid animate-slide-up"
+                                style="margin-bottom: 2rem; gap: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+                                <div class="premium-card"
+                                    style="border-top: 5px solid var(--danger); cursor: pointer; transition: transform 0.2s;"
+                                    onclick="window.location.href='/expenses?period_id=<%= filters.period_id %>&filter=today'"
+                                    onmouseover="this.style.transform='translateY(-2px)'"
+                                    onmouseout="this.style.transform='none'">
+                                    <div class="stat-header"
+                                        style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                        <div class="stat-icon"
+                                            style="background: #fee2e2; color: var(--danger); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                            <i class="fas fa-calendar-day"></i>
+                                        </div>
+                                        <span class="stat-label"
+                                            style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
+                                            <%= statsLabels ? statsLabels.day : 'Gastos de Hoy' %>
+                                        </span>
+                                    </div>
+                                    <h2 class="stat-value"
+                                        style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/
+                                        <%= typeof dailyTotal !=='undefined' ? dailyTotal.toFixed(2) : '0.00' %>
+                                    </h2>
+                                    <p
+                                        style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
+                                        Total registrado en el transcurso de hoy
+                                    </p>
+                                </div>
+
+                                <div class="premium-card"
+                                    style="border-top: 5px solid var(--warning); cursor: pointer; transition: transform 0.2s;"
+                                    onclick="window.location.href='/expenses?period_id=<%= filters.period_id %>&filter=week'"
+                                    onmouseover="this.style.transform='translateY(-2px)'"
+                                    onmouseout="this.style.transform='none'">
+                                    <div class="stat-header"
+                                        style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                        <div class="stat-icon"
+                                            style="background: #fef3c7; color: var(--warning); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                            <i class="fas fa-calendar-week"></i>
+                                        </div>
+                                        <span class="stat-label"
+                                            style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
+                                            <%= statsLabels ? statsLabels.week : 'Gastos de la Semana' %>
+                                        </span>
+                                    </div>
+                                    <h2 class="stat-value"
+                                        style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/
+                                        <%= typeof weeklyTotal !=='undefined' ? weeklyTotal.toFixed(2) : '0.00' %>
+                                    </h2>
+                                    <p
+                                        style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
+                                        <% if (statsLabels && statsLabels.weekRange) { const formatDate=(dateStr)=> {
+                                            const d = new Date(dateStr + 'T12:00:00');
+                                            return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                                            };
+                                            %>
+                                            Del <%= formatDate(statsLabels.weekRange.start) %> al <%=
+                                                    formatDate(statsLabels.weekRange.end) %>
+                                                    <% } else { %>
+                                                        Acumulado de Lunes a Domingo
+                                                        <% } %>
+                                    </p>
+                                </div>
+
+                                <div class="premium-card"
+                                    style="border-top: 5px solid var(--primary); cursor: pointer; transition: transform 0.2s;"
+                                    onclick="window.location.href='/expenses?period_id=<%= filters.period_id %>&filter=all'"
+                                    onmouseover="this.style.transform='translateY(-2px)'"
+                                    onmouseout="this.style.transform='none'">
+                                    <div class="stat-header"
+                                        style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                                        <div class="stat-icon"
+                                            style="background: #e0f2fe; color: var(--primary); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                            <i class="fas fa-coins"></i>
+                                        </div>
+                                        <span class="stat-label"
+                                            style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
+                                            Gastos Totales
+                                        </span>
+                                    </div>
+                                    <h2 class="stat-value"
+                                        style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/
+                                        <%= typeof filteredTotal !=='undefined' ? filteredTotal.toFixed(2) : '0.00' %>
+                                    </h2>
+                                    <p
+                                        style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
+                                        Suma total según los filtros aplicados
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="premium-card animate-slide-up"
+                                style="margin-bottom: 2rem; padding: 1.5rem; animation-delay: 0.1s;">
+                                <form action="/expenses" method="GET"
+                                    style="display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap;">
+                                    <input type="hidden" name="period_id" value="<%= filters.period_id %>">
+                                    <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                                        <label
+                                            style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Buscar
+                                            Movimiento</label>
+                                        <div style="position: relative;">
+                                            <i class="fas fa-search"
+                                                style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                            <input type="text" name="search"
+                                                placeholder="Buscar por concepto o notas..."
+                                                value="<%= filters.search || '' %>"
+                                                style="padding-left: 2.75rem; border-radius: 0.75rem;">
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                        <label
+                                            style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Día
+                                            Específico</label>
+                                        <input type="date" name="day" value="<%= filters.day || '' %>"
+                                            style="border-radius: 0.75rem;">
+                                    </div>
+                                    <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                        <label
+                                            style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Semana
+                                            Específica</label>
+                                        <input type="week" name="week" value="<%= filters.week || '' %>"
+                                            style="border-radius: 0.75rem;">
+                                    </div>
+                                    <div style="display: flex; gap: 0.75rem;">
+                                        <button type="submit" class="btn btn-primary"
+                                            style="padding: 0.75rem 1.5rem; border-radius: 0.75rem;">
+                                            <i class="fas fa-search"></i> Buscar
+                                        </button>
+                                        <a href="/expenses?period_id=<%= filters.period_id %>&filter=week" class="btn"
+                                            style="background: <%= filters.filter==='week' ? 'var(--primary)' : 'var(--bg-alt)' %>; color: <%= filters.filter==='week' ? 'white' : 'var(--text-main)' %>; font-weight: 700; border-radius: 0.75rem; padding: 0.75rem 1.5rem;">
+                                            <i class="fas fa-calendar-week"></i> Esta Semana
+                                        </a>
+                                        <% if (filters.search || filters.day || filters.week || filters.filter==='today'
+                                            ) { %>
+                                            <a href="/expenses?period_id=<%= filters.period_id %>&filter=all"
+                                                class="btn" title="Mostrar Todos"
+                                                style="background: var(--bg-alt); color: var(--text-main); font-weight: 700; border-radius: 0.75rem; padding: 0.75rem 1rem;">
+                                                Todos
+                                            </a>
                                             <% } %>
-                        </p>
-                    </div>
-
-                    <div class="premium-card"
-                        style="border-top: 5px solid var(--primary); cursor: pointer; transition: transform 0.2s;"
-                        onclick="window.location.href='/expenses?filter=all'"
-                        onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
-                        <div class="stat-header"
-                            style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-                            <div class="stat-icon"
-                                style="background: #e0f2fe; color: var(--primary); width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                                <i class="fas fa-coins"></i>
+                                    </div>
+                                </form>
                             </div>
-                            <span class="stat-label"
-                                style="font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
-                                Gastos Totales
-                            </span>
-                        </div>
-                        <h2 class="stat-value" style="font-size: 2rem; font-weight: 900; color: var(--text-main);">S/
-                            <%= typeof filteredTotal !=='undefined' ? filteredTotal.toFixed(2) : '0.00' %>
-                        </h2>
-                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; font-weight: 600;">
-                            Suma total según los filtros aplicados
-                        </p>
-                    </div>
-                </div>
-                <div class="premium-card animate-slide-up"
-                    style="margin-bottom: 2rem; padding: 1.5rem; animation-delay: 0.1s;">
-                    <form action="/expenses" method="GET"
-                        style="display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap;">
-                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                            <label
-                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Buscar
-                                Movimiento</label>
-                            <div style="position: relative;">
-                                <i class="fas fa-search"
-                                    style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
-                                <input type="text" name="search" placeholder="Buscar por concepto o notas..."
-                                    value="<%= filters.search || '' %>"
-                                    style="padding-left: 2.75rem; border-radius: 0.75rem;">
-                            </div>
-                        </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label
-                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Día
-                                Específico</label>
-                            <input type="date" name="day" value="<%= filters.day || '' %>"
-                                style="border-radius: 0.75rem;">
-                        </div>
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label
-                                style="font-size: 0.7rem; text-transform: uppercase; font-weight: 800; color: var(--text-muted); margin-bottom: 0.5rem; display: block;">Semana
-                                Específica</label>
-                            <input type="week" name="week" value="<%= filters.week || '' %>"
-                                style="border-radius: 0.75rem;">
-                        </div>
-                        <div style="display: flex; gap: 0.75rem;">
-                            <button type="submit" class="btn btn-primary"
-                                style="padding: 0.75rem 1.5rem; border-radius: 0.75rem;">
-                                <i class="fas fa-search"></i> Buscar
-                            </button>
-                            <a href="/expenses?filter=week" class="btn"
-                                style="background: <%= filters.filter==='week' ? 'var(--primary)' : 'var(--bg-alt)' %>; color: <%= filters.filter==='week' ? 'white' : 'var(--text-main)' %>; font-weight: 700; border-radius: 0.75rem; padding: 0.75rem 1.5rem;">
-                                <i class="fas fa-calendar-week"></i> Esta Semana
-                            </a>
-                            <% if (filters.search || filters.day || filters.week || filters.filter==='today' ) { %>
-                                <a href="/expenses?filter=all" class="btn" title="Mostrar Todos"
-                                    style="background: var(--bg-alt); color: var(--text-main); font-weight: 700; border-radius: 0.75rem; padding: 0.75rem 1rem;">
-                                    Todos
-                                </a>
-                                <% } %>
-                        </div>
-                    </form>
-                </div>
-                <div class="premium-card animate-slide-up" style="padding: 0; overflow: hidden; animation-delay: 0.2s;">
-                    <div class="table-container">
-                        <table class="data-table mobile-cards">
-                            <thead>
-                                <tr>
-                                    <th style="padding-left: 1.5rem;">Fecha</th>
-                                    <th>Concepto & Detalles</th>
-                                    <th>Categoría</th>
-                                    <th style="text-align: right;">Monto</th>
-                                    <th style="text-align: center; padding-right: 1.5rem;">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% if (expenses && expenses.length> 0) { %>
-                                    <% let lastExpDate=null; %>
-                                        <% expenses.forEach(exp=> { %>
-                                            <% const currentExpDate=new Date(exp.date).toLocaleDateString('es-ES', {
-                                                day: '2-digit' , month: 'long' , year: 'numeric' }); if (lastExpDate
-                                                !==currentExpDate) { %>
-                                                <tr style="background: var(--bg-alt);">
-                                                    <td colspan="5"
-                                                        style="padding: 0.75rem 1.5rem; font-weight: 800; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                                        <i class="fas fa-calendar-alt"
-                                                            style="margin-right: 0.5rem;"></i>
-                                                        <%= currentExpDate %>
-                                                    </td>
-                                                </tr>
-                                                <% lastExpDate=currentExpDate; } %>
-                                                    <tr>
-                                                        <td style="padding-left: 1.5rem;" data-label="Fecha">
-                                                            <div
-                                                                style="font-weight: 800; color: var(--text-main); font-size: 0.95rem;">
-                                                                <%= new Date(exp.date).toLocaleDateString('es-ES', {
-                                                                    day: '2-digit' }) %>
-                                                            </div>
-                                                            <div
-                                                                style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">
-                                                                <%= new Date(exp.date).toLocaleDateString('es-ES', {
-                                                                    month: 'short' }) %>
-                                                            </div>
-                                                        </td>
-                                                        <td data-label="Concepto">
-                                                            <div style="font-weight: 700; color: var(--text-main);">
-                                                                <%= exp.name %>
-                                                            </div>
-                                                            <div
-                                                                style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
-                                                                <%= exp.description || 'Sin descripción adicional' %>
-                                                            </div>
-                                                        </td>
-                                                        <td data-label="Categoría">
-                                                            <span
-                                                                style="font-size: 0.65rem; font-weight: 800; background: var(--bg-alt); color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--border);">
-                                                                <%= exp.category || 'Otros' %>
-                                                            </span>
-                                                        </td>
-                                                        <td style="text-align: right;" data-label="Monto">
-                                                            <span
-                                                                style="color: <%= exp.amount < 0 ? 'var(--success)' : 'var(--danger)' %>; font-weight: 900; font-size: 1.05rem;">
-                                                                <%= exp.amount < 0 ? '+ S/' : '- S/' %>
-                                                                    <%= Math.abs(parseFloat(exp.amount)).toFixed(2) %>
-                                                            </span>
-                                                        </td>
-                                                        <td style="text-align: center; padding-right: 1.5rem;"
-                                                            data-label="Acciones">
-                                                            <div
-                                                                style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
-                                                                <% if (exp.category === 'Préstamo') { %>
-                                                                    <span title="Este movimiento está vinculado a un préstamo. Para modificarlo o eliminarlo, hazlo desde la sección de Préstamos." 
-                                                                          style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; background: var(--bg-alt); padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: 1px solid var(--border);">
-                                                                        <i class="fas fa-lock" style="font-size: 0.8rem; color: #94a3b8;"></i> Vinculado
-                                                                    </span>
-                                                                <% } else { %>
-                                                                    <button type="button"
-                                                                        style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
-                                                                        onmouseover="this.style.color='var(--primary)'"
-                                                                        onmouseout="this.style.color='#94a3b8'"
-                                                                        onclick="openEditExpenseModal('<%= exp.id %>', '<%= exp.name %>', '<%= exp.amount %>', '<%= exp.date %>', '<%= exp.description %>', '<%= exp.category %>')">
-                                                                        <i class="fas fa-edit"
-                                                                            style="font-size: 1.1rem;"></i>
-                                                                    </button>
-                                                                    <form id="deleteExpForm-<%= exp.id %>"
-                                                                        action="/expenses/delete/<%= exp.id %>"
-                                                                        method="POST">
-                                                                        <button type="button"
-                                                                            style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
-                                                                            onmouseover="this.style.color='var(--danger)'"
-                                                                            onmouseout="this.style.color='#94a3b8'"
-                                                                            data-id="<%= exp.id %>"
-                                                                            data-name="<%= exp.name %>"
-                                                                            onclick="confirmDeleteExpense(this)">
-                                                                            <i class="fas fa-trash-alt"
-                                                                                style="font-size: 1.1rem;"></i>
-                                                                        </button>
-                                                                    </form>
-                                                                <% } %>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                    <% }) %>
-                                                        <% } else { %>
-                                                            <tr>
+                            <div class="premium-card animate-slide-up"
+                                style="padding: 0; overflow: hidden; animation-delay: 0.2s;">
+                                <div class="table-container">
+                                    <table class="data-table mobile-cards">
+                                        <thead>
+                                            <tr>
+                                                <th style="padding-left: 1.5rem;">Fecha</th>
+                                                <th>Concepto & Detalles</th>
+                                                <th>Categoría</th>
+                                                <th style="text-align: right;">Monto</th>
+                                                <th style="text-align: center; padding-right: 1.5rem;">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% if (expenses && expenses.length> 0) { %>
+                                                <% let lastExpDate=null; %>
+                                                    <% expenses.forEach(exp=> { %>
+                                                        <% const currentExpDate=new
+                                                            Date(exp.date).toLocaleDateString('es-ES', { day: '2-digit'
+                                                            , month: 'long' , year: 'numeric' }); if (lastExpDate
+                                                            !==currentExpDate) { %>
+                                                            <tr style="background: var(--bg-alt);">
                                                                 <td colspan="5"
-                                                                    style="text-align: center; padding: 6rem 2rem;">
-                                                                    <div
-                                                                        style="font-size: 3.5rem; margin-bottom: 1.5rem; color: #e2e8f0;">
-                                                                        <i class="fas fa-folder-open"></i>
-                                                                    </div>
-                                                                    <h3
-                                                                        style="color: var(--text-main); font-weight: 800; margin-bottom: 0.5rem;">
-                                                                        No hay registros</h3>
-                                                                    <p style="color: var(--text-muted);">No encontramos
-                                                                        movimientos
-                                                                        que coincidan con tu búsqueda.</p>
+                                                                    style="padding: 0.75rem 1.5rem; font-weight: 800; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                                                    <i class="fas fa-calendar-alt"
+                                                                        style="margin-right: 0.5rem;"></i>
+                                                                    <%= currentExpDate %>
                                                                 </td>
                                                             </tr>
-                                                            <% } %>
-                            </tbody>
-                        </table>
-                    </div>
+                                                            <% lastExpDate=currentExpDate; } %>
+                                                                <tr>
+                                                                    <td style="padding-left: 1.5rem;"
+                                                                        data-label="Fecha">
+                                                                        <div
+                                                                            style="font-weight: 800; color: var(--text-main); font-size: 0.95rem;">
+                                                                            <%= new
+                                                                                Date(exp.date).toLocaleDateString('es-ES',
+                                                                                { day: '2-digit' }) %>
+                                                                        </div>
+                                                                        <div
+                                                                            style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">
+                                                                            <%= new
+                                                                                Date(exp.date).toLocaleDateString('es-ES',
+                                                                                { month: 'short' }) %>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td data-label="Concepto">
+                                                                        <div
+                                                                            style="font-weight: 700; color: var(--text-main);">
+                                                                            <%= exp.name %>
+                                                                        </div>
+                                                                        <div
+                                                                            style="font-size: 0.75rem; color: var(--text-muted); line-height: 1.4;">
+                                                                            <%= exp.description
+                                                                                || 'Sin descripción adicional' %>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td data-label="Categoría">
+                                                                        <% if (exp.category === 'Préstamo') { %>
+                                                                            <% if (exp.amount < 0) { %>
+                                                                                <span style="font-size: 0.65rem; font-weight: 800; background: #ecfdf5; color: #059669; padding: 0.4rem 0.8rem; border-radius: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid #a7f3d0; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                                                                    <i class="fas fa-hand-holding-dollar"></i> Abono Préstamo
+                                                                                </span>
+                                                                            <% } else { %>
+                                                                                <span style="font-size: 0.65rem; font-weight: 800; background: #eff6ff; color: #2563eb; padding: 0.4rem 0.8rem; border-radius: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid #bfdbfe; display: inline-flex; align-items: center; gap: 0.35rem;">
+                                                                                    <i class="fas fa-arrow-up-right-from-square"></i> Préstamo
+                                                                                </span>
+                                                                            <% } %>
+                                                                        <% } else { %>
+                                                                            <span
+                                                                                style="font-size: 0.65rem; font-weight: 800; background: var(--bg-alt); color: var(--primary); padding: 0.4rem 0.8rem; border-radius: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid var(--border);">
+                                                                                <%= exp.category || 'Otros' %>
+                                                                            </span>
+                                                                        <% } %>
+                                                                    </td>
+                                                                    <td style="text-align: right;" data-label="Monto">
+                                                                        <span
+                                                                            style="color: <%= exp.amount < 0 ? 'var(--success)' : 'var(--danger)' %>; font-weight: 900; font-size: 1.05rem;">
+                                                                            <%= exp.amount < 0 ? '+ S/' : '- S/' %>
+                                                                                <%= Math.abs(parseFloat(exp.amount)).toFixed(2)
+                                                                                    %>
+                                                                        </span>
+                                                                    </td>
+                                                                    <td style="text-align: center; padding-right: 1.5rem;"
+                                                                        data-label="Acciones">
+                                                                        <div
+                                                                            style="display: flex; gap: 0.5rem; justify-content: center; align-items: center;">
+                                                                            <% if (exp.category==='Préstamo' ) { %>
+                                                                                <span
+                                                                                    title="Movimiento de préstamo vinculado. Es informativo para trazabilidad y no altera tus totales de gastos. Para gestionarlo, dirígete a Préstamos."
+                                                                                    style="color: var(--text-muted); font-size: 0.72rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.35rem; background: var(--bg-alt); padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: 1px solid var(--border); cursor: default;">
+                                                                                    <i class="fas fa-lock"
+                                                                                        style="font-size: 0.8rem; color: #94a3b8;"></i>
+                                                                                    Trazabilidad
+                                                                                </span>
+                                                                                <% } else { %>
+                                                                                    <button type="button"
+                                                                                        style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
+                                                                                        onmouseover="this.style.color='var(--primary)'"
+                                                                                        onmouseout="this.style.color='#94a3b8'"
+                                                                                        onclick="openEditExpenseModal('<%= exp.id %>', '<%= exp.name %>', '<%= exp.amount %>', '<%= exp.date %>', '<%= exp.description %>', '<%= exp.category %>')">
+                                                                                        <i class="fas fa-edit"
+                                                                                            style="font-size: 1.1rem;"></i>
+                                                                                    </button>
+                                                                                    <form
+                                                                                        id="deleteExpForm-<%= exp.id %>"
+                                                                                        action="/expenses/delete/<%= exp.id %>"
+                                                                                        method="POST">
+                                                                                        <button type="button"
+                                                                                            style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
+                                                                                            onmouseover="this.style.color='var(--danger)'"
+                                                                                            onmouseout="this.style.color='#94a3b8'"
+                                                                                            data-id="<%= exp.id %>"
+                                                                                            data-name="<%= exp.name %>"
+                                                                                            onclick="confirmDeleteExpense(this)">
+                                                                                            <i class="fas fa-trash-alt"
+                                                                                                style="font-size: 1.1rem;"></i>
+                                                                                        </button>
+                                                                                    </form>
+                                                                                    <% } %>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                                <% }) %>
+                                                                    <% } else { %>
+                                                                        <tr>
+                                                                            <td colspan="5"
+                                                                                style="text-align: center; padding: 6rem 2rem;">
+                                                                                <div
+                                                                                    style="font-size: 3.5rem; margin-bottom: 1.5rem; color: #e2e8f0;">
+                                                                                    <i class="fas fa-folder-open"></i>
+                                                                                </div>
+                                                                                <h3
+                                                                                    style="color: var(--text-main); font-weight: 800; margin-bottom: 0.5rem;">
+                                                                                    No hay registros</h3>
+                                                                                <p style="color: var(--text-muted);">No
+                                                                                    encontramos
+                                                                                    movimientos
+                                                                                    que coincidan con tu búsqueda.</p>
+                                                                            </td>
+                                                                        </tr>
+                                                                        <% } %>
+                                        </tbody>
+                                    </table>
+                                </div>
 
-                    <% if (typeof pagination !=='undefined' && pagination.totalPages> 1) { %>
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-top: 1px solid var(--border);">
-                            <% if (pagination.currentPage> 1) { %>
-                                <a href="/expenses?page=<%= pagination.currentPage - 1 %><%= filters.search ? '&search='+filters.search : '' %><%= filters.day ? '&day='+filters.day : '' %><%= filters.week ? '&week='+filters.week : '' %><%= filters.filter ? '&filter='+filters.filter : '' %>"
-                                    class="btn"
-                                    style="background: var(--bg-alt); padding: 0.75rem 1.25rem; border-radius: 0.75rem; color: var(--text-main); font-weight: 700;">
-                                    <i class="fas fa-chevron-left"></i> Anterior
-                                </a>
-                                <% } else { %>
-                                    <div></div>
-                                    <% } %>
-
-                                        <span
-                                            style="font-size: 0.85rem; font-weight: 800; color: var(--text-muted); padding: 0 1rem; background: var(--bg-alt); padding: 0.5rem 1rem; border-radius: 2rem;">
-                                            Página <%= pagination.currentPage %> de <%= pagination.totalPages %>
-                                        </span>
-
-                                        <% if (pagination.currentPage < pagination.totalPages) { %>
-                                            <a href="/expenses?page=<%= pagination.currentPage + 1 %><%= filters.search ? '&search='+filters.search : '' %><%= filters.day ? '&day='+filters.day : '' %><%= filters.week ? '&week='+filters.week : '' %><%= filters.filter ? '&filter='+filters.filter : '' %>"
+                                <% if (typeof pagination !=='undefined' && pagination.totalPages> 1) { %>
+                                    <div
+                                        style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-top: 1px solid var(--border);">
+                                        <% if (pagination.currentPage> 1) { %>
+                                            <a href="/expenses?page=<%= pagination.currentPage - 1 %>&period_id=<%= filters.period_id %><%= filters.search ? '&search='+filters.search : '' %><%= filters.day ? '&day='+filters.day : '' %><%= filters.week ? '&week='+filters.week : '' %><%= filters.filter ? '&filter='+filters.filter : '' %>"
                                                 class="btn"
                                                 style="background: var(--bg-alt); padding: 0.75rem 1.25rem; border-radius: 0.75rem; color: var(--text-main); font-weight: 700;">
-                                                Siguiente <i class="fas fa-chevron-right"></i>
+                                                <i class="fas fa-chevron-left"></i> Anterior
                                             </a>
                                             <% } else { %>
                                                 <div></div>
                                                 <% } %>
-                        </div>
-                        <% } %>
-                </div>
+
+                                                    <span
+                                                        style="font-size: 0.85rem; font-weight: 800; color: var(--text-muted); padding: 0 1rem; background: var(--bg-alt); padding: 0.5rem 1rem; border-radius: 2rem;">
+                                                        Página <%= pagination.currentPage %> de <%=
+                                                                pagination.totalPages %>
+                                                    </span>
+
+                                                    <% if (pagination.currentPage < pagination.totalPages) { %>
+                                                        <a href="/expenses?page=<%= pagination.currentPage + 1 %>&period_id=<%= filters.period_id %><%= filters.search ? '&search='+filters.search : '' %><%= filters.day ? '&day='+filters.day : '' %><%= filters.week ? '&week='+filters.week : '' %><%= filters.filter ? '&filter='+filters.filter : '' %>"
+                                                            class="btn"
+                                                            style="background: var(--bg-alt); padding: 0.75rem 1.25rem; border-radius: 0.75rem; color: var(--text-main); font-weight: 700;">
+                                                            Siguiente <i class="fas fa-chevron-right"></i>
+                                                        </a>
+                                                        <% } else { %>
+                                                            <div></div>
+                                                            <% } %>
+                                    </div>
+                                    <% } %>
+                            </div>
             </main>
     </div>
 
@@ -502,6 +637,10 @@
     </button>
 
     <script>
+        function changeBudgetPeriod(periodId) {
+            window.location.href = '/expenses?period_id=' + encodeURIComponent(periodId);
+        }
+
         function confirmDeleteExpense(btn) {
             const id = btn.getAttribute('data-id');
             const name = btn.getAttribute('data-name');

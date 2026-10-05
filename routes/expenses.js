@@ -4,7 +4,7 @@ const db = require('../lib/db');
 
 router.get('/', async (req, res) => {
     const userId = req.session.userId;
-    const { search, day: dayFilter, week: weekFilter, filter, page } = req.query;
+    const { search, day: dayFilter, week: weekFilter, filter, page, period_id } = req.query;
     try {
         const isValidDate = (d) => d && /^\d{4}-\d{2}-\d{2}$/.test(d);
         const isValidWeek = (w) => w && /^\d{4}-W\d{2}$/.test(w);
@@ -15,19 +15,52 @@ router.get('/', async (req, res) => {
         const currentDay = PET.getDay();
         const diff = PET.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
         const currentStartOfWeek = new Date(PET.setDate(diff)).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
-        const activePeriodRes = await db.query(
-            'SELECT * FROM public.budget_periods WHERE user_id = $1 AND is_active = TRUE ORDER BY created_at DESC LIMIT 1',
+
+        const periodsRes = await db.query(
+            'SELECT * FROM public.budget_periods WHERE user_id = $1 ORDER BY is_active DESC, start_date DESC, created_at DESC',
             [userId]
         );
-        const activePeriod = activePeriodRes.rows[0];
+        const budgetPeriods = periodsRes.rows;
+        const activePeriod = budgetPeriods.find(p => p.is_active) || null;
+        let selectedPeriod = null;
+        let selectedPeriodId = period_id;
+
+        if (period_id === 'all') {
+            selectedPeriod = null;
+            selectedPeriodId = 'all';
+        } else if (period_id) {
+            selectedPeriod = budgetPeriods.find(p => p.id.toString() === period_id.toString()) || null;
+            if (!selectedPeriod && activePeriod) {
+                selectedPeriod = activePeriod;
+                selectedPeriodId = activePeriod.id.toString();
+            } else if (!selectedPeriod && budgetPeriods.length > 0) {
+                selectedPeriod = budgetPeriods[0];
+                selectedPeriodId = budgetPeriods[0].id.toString();
+            }
+        } else {
+            if (activePeriod) {
+                selectedPeriod = activePeriod;
+                selectedPeriodId = activePeriod.id.toString();
+            } else if (budgetPeriods.length > 0) {
+                selectedPeriod = budgetPeriods[0];
+                selectedPeriodId = budgetPeriods[0].id.toString();
+            } else {
+                selectedPeriodId = 'all';
+            }
+        }
+
+        // Default quick filter: if historical or all periods, default to 'all'; if active period, default to 'week'
+        const isHistorical = selectedPeriod && !selectedPeriod.is_active;
+        const defaultFilter = (isHistorical || selectedPeriodId === 'all') ? 'all' : 'week';
+        const activeFilter = filter || (!search && !dayFilter && !weekFilter ? defaultFilter : '');
 
         let baseQuery = ' FROM expenses WHERE user_id = $1';
         let params = [userId];
 
-        if (activePeriod) {
+        if (selectedPeriod) {
             baseQuery += ' AND date >= $' + (params.length + 1) + ' AND date <= $' + (params.length + 2);
-            params.push(activePeriod.start_date, activePeriod.end_date);
-        } else {
+            params.push(selectedPeriod.start_date, selectedPeriod.end_date);
+        } else if (selectedPeriodId !== 'all' && budgetPeriods.length === 0) {
             baseQuery += ' AND 1 = 0';
         }
 
@@ -36,13 +69,14 @@ router.get('/', async (req, res) => {
         const tempPET = new Date(currentStartOfWeek + 'T12:00:00');
         let statsTargetWeekEnd = new Date(tempPET.setDate(tempPET.getDate() + 6)).toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
-        if (filter === 'today') {
+        if (activeFilter === 'today') {
             baseQuery += ' AND date = $' + (params.length + 1);
             params.push(todayDate);
-        } else if (filter === 'week') {
+        } else if (activeFilter === 'week') {
             baseQuery += ' AND date >= $' + (params.length + 1);
             params.push(currentStartOfWeek);
-        } else if (filter === 'all') {
+        } else if (activeFilter === 'all') {
+            // No extra date restriction (shows all movements in selected budget period or history)
         } else if (isValidDate(dayFilter)) {
             baseQuery += ' AND date = $' + (params.length + 1);
             params.push(dayFilter);
@@ -58,7 +92,7 @@ router.get('/', async (req, res) => {
 
             baseQuery += ' AND date >= $' + (params.length + 1) + ' AND date <= $' + (params.length + 2);
             params.push(statsTargetWeekStart, statsTargetWeekEnd);
-        } else if (!search) {
+        } else if (!search && activeFilter === 'week') {
             baseQuery += ' AND date >= $' + (params.length + 1);
             params.push(currentStartOfWeek);
         }
@@ -96,14 +130,24 @@ router.get('/', async (req, res) => {
         let statsParams = [userId, statsTargetDay, statsTargetWeekStart];
         if (statsTargetWeekEnd) statsParams.push(statsTargetWeekEnd);
 
-        if (activePeriod) {
+        if (selectedPeriod) {
             statsQuery += ` AND date >= $${statsParams.length + 1} AND date <= $${statsParams.length + 2}`;
-            statsParams.push(activePeriod.start_date, activePeriod.end_date);
-        } else {
-            statsQuery += ' AND 1 = 0';
+            statsParams.push(selectedPeriod.start_date, selectedPeriod.end_date);
         }
 
         const statsRes = await db.query(statsQuery, statsParams);
+
+        // Calculate total spent specifically for the selected period
+        let periodSpent = 0;
+        if (selectedPeriod) {
+            const periodSpentRes = await db.query(
+                `SELECT COALESCE(SUM(amount), 0) as total FROM expenses 
+                 WHERE user_id = $1 AND category != 'Préstamo' AND amount > 0 
+                 AND date >= $2 AND date <= $3`,
+                [userId, selectedPeriod.start_date, selectedPeriod.end_date]
+            );
+            periodSpent = parseFloat(periodSpentRes.rows[0].total);
+        }
 
         res.render('expenses/index', {
             expenses: expensesRes.rows,
@@ -111,7 +155,18 @@ router.get('/', async (req, res) => {
             weeklyTotal: parseFloat(statsRes.rows[0].weekly_total),
             filteredTotal,
             username: req.session.username,
-            filters: { search, day: isValidDate(dayFilter) ? dayFilter : '', week: isValidWeek(weekFilter) ? weekFilter : '', filter: filter || (!search && !dayFilter && !weekFilter ? 'week' : '') },
+            budgetPeriods,
+            selectedPeriod,
+            selectedPeriodId,
+            periodSpent,
+            todayDate,
+            filters: {
+                search,
+                day: isValidDate(dayFilter) ? dayFilter : '',
+                week: isValidWeek(weekFilter) ? weekFilter : '',
+                filter: activeFilter,
+                period_id: selectedPeriodId
+            },
             pagination: { currentPage, totalPages, totalRecords },
             statsLabels: {
                 day: isValidDate(dayFilter) ? 'Día Seleccionado' : 'Gastos de Hoy',

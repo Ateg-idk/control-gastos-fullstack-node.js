@@ -38,7 +38,19 @@ router.get('/', async (req, res) => {
         const totalLentThisPeriod = loanOutflows.reduce((sum, exp) => sum + parseFloat(exp.amount), 0);
 
         const loanRecoveries = expenses.filter(exp => exp.category === 'Préstamo' && parseFloat(exp.amount) < 0);
-        const totalRecoveredThisPeriod = loanRecoveries.reduce((sum, exp) => sum + Math.abs(parseFloat(exp.amount)), 0);
+        const budgetLoanRecoveries = loanRecoveries.filter(recovery => {
+            let matchedLoan = null;
+            if (recovery.loan_id) {
+                matchedLoan = loans.find(l => l.id === recovery.loan_id);
+            }
+            if (!matchedLoan) {
+                const personName = recovery.name.replace('Abono Préstamo (Externo): ', '').replace('Abono Préstamo: ', '').trim();
+                matchedLoan = loans.find(l => l.person_name.toLowerCase() === personName.toLowerCase());
+            }
+            return matchedLoan ? matchedLoan.from_budget : true;
+        });
+
+        const totalRecoveredThisPeriod = budgetLoanRecoveries.reduce((sum, exp) => sum + Math.abs(parseFloat(exp.amount)), 0);
 
         let totalRecoveredOldLoans = 0;
         if (activePeriod) {
@@ -47,16 +59,16 @@ router.get('/', async (req, res) => {
             };
             const activePeriodStartStr = toLimaDateString(activePeriod.start_date);
 
-            loanRecoveries.forEach(recovery => {
+            budgetLoanRecoveries.forEach(recovery => {
                 let matchedLoan = null;
                 if (recovery.loan_id) {
                     matchedLoan = loans.find(l => l.id === recovery.loan_id);
                 }
                 if (!matchedLoan) {
-                    const personName = recovery.name.replace('Abono Préstamo: ', '').trim();
+                    const personName = recovery.name.replace('Abono Préstamo (Externo): ', '').replace('Abono Préstamo: ', '').trim();
                     matchedLoan = loans.find(l => l.person_name.toLowerCase() === personName.toLowerCase());
                 }
-                if (matchedLoan) {
+                if (matchedLoan && matchedLoan.from_budget) {
                     const loanDateStr = toLimaDateString(matchedLoan.date);
                     if (loanDateStr < activePeriodStartStr) {
                         totalRecoveredOldLoans += Math.abs(parseFloat(recovery.amount));

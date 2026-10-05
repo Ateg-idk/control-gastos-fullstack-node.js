@@ -120,10 +120,16 @@ router.post('/pay/:id', async (req, res) => {
             await db.query('UPDATE loans SET paid_amount = $1, status = $2, payment_date = $3 WHERE id = $4 AND user_id = $5',
                 [newPaid, newStatus, newStatus === 'paid' ? todayDate : null, req.params.id, userId]);
 
-            if (loan.from_budget && actualPayment > 0) {
+            if (actualPayment > 0) {
+                const isBudgetLoan = loan.from_budget;
+                const expName = isBudgetLoan ? `Abono Préstamo: ${loan.person_name}` : `Abono Préstamo (Externo): ${loan.person_name}`;
+                const expDesc = isBudgetLoan 
+                    ? `Abono de S/ ${actualPayment.toFixed(2)} por préstamo del ${new Date(loan.date).toLocaleDateString('es-ES')}` 
+                    : `Abono de S/ ${actualPayment.toFixed(2)} por préstamo externo (solo informativo / trazabilidad)`;
+
                 await db.query(
                     'INSERT INTO expenses (user_id, name, amount, date, description, category, loan_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-                    [userId, `Abono Préstamo: ${loan.person_name}`, -actualPayment, todayDate, `Abono de S/ ${actualPayment.toFixed(2)} por préstamo del ${new Date(loan.date).toLocaleDateString('es-ES')}`, 'Préstamo', req.params.id]
+                    [userId, expName, -actualPayment, todayDate, expDesc, 'Préstamo', req.params.id]
                 );
             }
             await db.query('COMMIT');
@@ -148,13 +154,13 @@ router.post('/undo/:id', async (req, res) => {
             await db.query('UPDATE loans SET status = $1, payment_date = NULL, paid_amount = 0 WHERE id = $2 AND user_id = $3',
                 ['pending', req.params.id, userId]);
 
-            if (loan.from_budget && paidAmount > 0) {
+            if (paidAmount > 0) {
                 await db.query(`
                     DELETE FROM expenses 
                     WHERE user_id = $1 
                       AND category = 'Préstamo' 
-                      AND (loan_id = $2 OR (loan_id IS NULL AND name = $3))
-                `, [userId, req.params.id, `Abono Préstamo: ${loan.person_name}`]);
+                      AND (loan_id = $2 OR (loan_id IS NULL AND (name = $3 OR name = $4)))
+                `, [userId, req.params.id, `Abono Préstamo: ${loan.person_name}`, `Abono Préstamo (Externo): ${loan.person_name}`]);
             }
             await db.query('COMMIT');
         }

@@ -112,20 +112,26 @@
                                     </h3>
                                 </div>
 
-                                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-                                    <button type="button" class="btn"
-                                        style="flex: 1; min-width: 200px; background: white; color: var(--primary); font-weight: 800; padding: 1.25rem; border-radius: 1rem; justify-content: center; border: 1px solid var(--primary);"
-                                        onclick="openEditBudgetModal('<%= activePeriod.id %>', '<%= activePeriod.name %>', '<%= activePeriod.amount %>', '<%= activePeriod.start_date %>', '<%= activePeriod.end_date %>')">
-                                        <i class="fas fa-edit" style="margin-right: 0.75rem;"></i> Editar
-                                    </button>
-                                    <form action="/budget/close/<%= activePeriod.id %>" method="POST"
-                                        style="flex: 1; min-width: 200px;"
-                                        onsubmit="return confirm('¿Estás seguro de cerrar este periodo? Se guardará en el historial.')">
-                                        <button type="submit" class="btn"
-                                            style="width: 100%; background: #fee2e2; color: var(--danger); font-weight: 800; padding: 1.25rem; border-radius: 1rem; justify-content: center;">
-                                            <i class="fas fa-lock" style="margin-right: 0.75rem;"></i> Finalizar Periodo
+                                <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                    <a href="/expenses?period_id=<%= activePeriod.id %>&filter=all" class="btn"
+                                        style="width: 100%; background: var(--primary-light); color: var(--primary); font-weight: 800; padding: 1.15rem; border-radius: 1rem; justify-content: center; border: 1px solid rgba(67, 56, 202, 0.2); text-decoration: none; display: flex; align-items: center;">
+                                        <i class="fas fa-list-ul" style="margin-right: 0.75rem;"></i> Ver Movimientos de este Periodo
+                                    </a>
+                                    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                                        <button type="button" class="btn"
+                                            style="flex: 1; min-width: 140px; background: white; color: var(--primary); font-weight: 800; padding: 1.15rem; border-radius: 1rem; justify-content: center; border: 1px solid var(--primary);"
+                                            onclick="openEditBudgetModal('<%= activePeriod.id %>', '<%= activePeriod.name %>', '<%= activePeriod.amount %>', '<%= activePeriod.start_date %>', '<%= activePeriod.end_date %>')">
+                                            <i class="fas fa-edit" style="margin-right: 0.5rem;"></i> Editar
                                         </button>
-                                    </form>
+                                        <form action="/budget/close/<%= activePeriod.id %>" method="POST"
+                                            style="flex: 1; min-width: 140px;"
+                                            onsubmit="return confirm('¿Estás seguro de cerrar este periodo? Se guardará en el historial.')">
+                                            <button type="submit" class="btn"
+                                                style="width: 100%; background: #fee2e2; color: var(--danger); font-weight: 800; padding: 1.15rem; border-radius: 1rem; justify-content: center;">
+                                                <i class="fas fa-lock" style="margin-right: 0.5rem;"></i> Finalizar
+                                            </button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                             <% } else { %>
@@ -182,11 +188,19 @@
                                             </td>
                                             <td style="text-align: center; padding-right: 1.5rem; display: flex; gap: 0.75rem; justify-content: center; align-items: center;"
                                                 data-label="Acciones">
+                                                <a href="/expenses?period_id=<%= p.id %>&filter=all"
+                                                    style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s; display: inline-flex; align-items: center;"
+                                                    onmouseover="this.style.color='var(--primary)'"
+                                                    onmouseout="this.style.color='#94a3b8'"
+                                                    title="Ver movimientos de este periodo">
+                                                    <i class="fas fa-list-ul" style="font-size: 1.1rem;"></i>
+                                                </a>
                                                 <button type="button"
                                                     style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
                                                     onmouseover="this.style.color='var(--primary)'"
                                                     onmouseout="this.style.color='#94a3b8'"
-                                                    onclick="openEditBudgetModal('<%= p.id %>', '<%= p.name %>', '<%= p.amount %>', '<%= p.start_date %>', '<%= p.end_date %>')">
+                                                    onclick="openEditBudgetModal('<%= p.id %>', '<%= p.name %>', '<%= p.amount %>', '<%= p.start_date %>', '<%= p.end_date %>')"
+                                                    title="Editar periodo">
                                                     <i class="fas fa-edit" style="font-size: 1.1rem;"></i>
                                                 </button>
                                                 <form id="deleteBudgetForm-<%= p.id %>"
@@ -196,7 +210,8 @@
                                                         style="background: none; border: none; cursor: pointer; color: #94a3b8; transition: all 0.2s;"
                                                         onmouseover="this.style.color='var(--danger)'"
                                                         onmouseout="this.style.color='#94a3b8'" data-id="<%= p.id %>"
-                                                        data-name="<%= p.name %>" onclick="confirmDeleteBudget(this)">
+                                                        data-name="<%= p.name %>" onclick="confirmDeleteBudget(this)"
+                                                        title="Eliminar periodo">
                                                         <i class="fas fa-trash-can" style="font-size: 1.1rem;"></i>
                                                     </button>
                                                 </form>
